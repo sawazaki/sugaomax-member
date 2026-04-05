@@ -1,0 +1,39 @@
+{
+  "name": "菅生マックス 管理システム",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  "workspaceMount": "source=${localWorkspaceFolder},target=/var/www/html,type=bind",
+  "workspaceFolder": "/var/www/html",
+
+  "forwardPorts": [80],
+  "portsAttributes": {
+    "80": {
+      "label": "Apache (minibasket)",
+      "onAutoForward": "notify"
+    }
+  },
+
+  // コンテナ起動後にNode.js・Claude Codeを自動インストール
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "xdebug.php-debug",
+        "mtxr.sqliteviewer",
+        "esbenp.prettier-vscode",
+        "anthropic.claude-code"            // ← Claude Code拡張を追加
+      ],
+      "settings": {
+        "php.validate.executablePath": "/usr/local/bin/php",
+        "editor.formatOnSave": true,
+        "[php]": {
+          "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+        }
+      }
+    }
+  }
+}
