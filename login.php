@@ -10,7 +10,7 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
-    if ($password === APP_PASSWORD) {
+    if (defined('APP_PASSWORD_HASH') && password_verify($password, APP_PASSWORD_HASH)) {
         $_SESSION['logged_in'] = true;
         header('Location: /index.php');
         exit;

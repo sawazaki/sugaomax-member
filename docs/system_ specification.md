@@ -167,12 +167,29 @@ login.php
 - ログイン成功後、`$_SESSION['logged_in'] = true` をセット
 - 全ページの先頭で `require_login()` を呼び出し、未認証の場合は `login.php` へリダイレクト
 
-### パスワードの変更方法
+### パスワードの保存方式
 
-`includes/db.php` の冒頭にある定数を変更します。
+| 項目 | 内容 |
+| ---- | ---- |
+| 保存先 | `data/config.php`（Git管理外） |
+| ハッシュアルゴリズム | bcrypt（`PASSWORD_BCRYPT`、cost=12） |
+| 検証関数 | `password_verify()` |
+| 最小文字数 | 8文字 |
 
-```php
-define('APP_PASSWORD', '新しいパスワード');
+パスワードはソースコードに含まれず、`data/` ディレクトリ（`.gitignore` 済み）に保存されるため、Git リポジトリへの漏洩を防ぎます。
+
+### 初回セットアップ
+
+`data/config.php` が存在しない場合、全ページへのアクセスが自動的に `setup.php` へリダイレクトされます。`setup.php` でパスワードを入力すると `data/config.php` が生成されます。
+
+### パスワードの再設定
+
+1. `data/config.php` を削除する
+2. `setup.php` にアクセスして新しいパスワードを入力・保存する
+
+```bash
+rm data/config.php
+# ブラウザで /setup.php を開く
 ```
 
 ---
@@ -330,12 +347,13 @@ define('APP_PASSWORD', '新しいパスワード');
 - Apache Webサーバー
 - `data/` ディレクトリへの書き込み権限
 
-### パスワード変更
+### パスワードの再設定
 
-`includes/db.php`:
+`data/config.php` を削除してから `setup.php` にアクセスします。
 
-```php
-define('APP_PASSWORD', 'sugaomax2024'); // ← ここを変更
+```bash
+rm data/config.php
+# ブラウザで /setup.php を開く
 ```
 
 ### 印刷時の推奨設定（Chrome）

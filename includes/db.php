@@ -1,8 +1,17 @@
 <?php
-define('APP_PASSWORD', 'sugaomax2026');
 define('DB_PATH', __DIR__ . '/../data/minibasket.db');
 
 session_start();
+
+// パスワード設定ファイル（data/ はGitignore済み）
+$_config_path = __DIR__ . '/../data/config.php';
+if (file_exists($_config_path)) {
+    require_once $_config_path;
+} elseif (basename($_SERVER['SCRIPT_FILENAME']) !== 'setup.php') {
+    header('Location: /setup.php');
+    exit;
+}
+unset($_config_path);
 
 function require_login()
 {

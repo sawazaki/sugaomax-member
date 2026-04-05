@@ -70,10 +70,23 @@ php -S localhost:8080 -t /var/www/html
 
 ### ログイン
 
-`includes/db.php` の `APP_PASSWORD` 定数に設定されたパスワードでログインします。
+初回アクセス時は自動的に `/setup.php` にリダイレクトされます。パスワードを設定するとログインできるようになります。
+
+設定したパスワードは bcrypt でハッシュ化され、`data/config.php` に保存されます（Git 管理外）。
+
+### パスワードの再設定
+
+1. `data/config.php` を削除する
+2. `/setup.php` にアクセスして新しいパスワードを設定する
+
+```bash
+rm data/config.php
+# ブラウザで /setup.php を開く
+```
 
 ## セキュリティ
 
 - SQL はすべてプリペアドステートメントを使用（SQLインジェクション対策）
 - 出力は `h()` 関数（`htmlspecialchars`）でエスケープ（XSS 対策）
 - 全ページで `require_login()` によるセッション認証
+- パスワードは bcrypt ハッシュ化して保存（`data/` は `.gitignore` 済み）
