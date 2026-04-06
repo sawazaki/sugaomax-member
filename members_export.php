@@ -17,6 +17,7 @@ $required_fields = ['grade', 'name'];
 
 // CSVダウンロード処理
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'export') {
+    verify_csrf();
     $selected = [];
     foreach (array_keys($all_fields) as $key) {
         if (in_array($key, $required_fields) || !empty($_POST['fields'][$key])) {
@@ -45,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'expor
             if ($key === 'grade') {
                 $row[] = $m['grade'] . '年';
             } else {
-                $row[] = $m[$key] ?? '';
+                $row[] = csv_safe($m[$key] ?? '');
             }
         }
         fputcsv($out, $row);
@@ -71,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'expor
     <div class="card" style="max-width:480px">
         <div class="card-title">エクスポートする項目を選択</div>
         <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
             <input type="hidden" name="action" value="export">
             <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
                 <?php foreach ($all_fields as $key => $label):

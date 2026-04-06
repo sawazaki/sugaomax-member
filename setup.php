@@ -1,5 +1,11 @@
 <?php
 define('DB_PATH', __DIR__ . '/data/minibasket.db');
+$session_secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+session_set_cookie_params([
+    'httponly' => true,
+    'secure' => $session_secure,
+    'samesite' => 'Lax',
+]);
 session_start();
 
 $config_path = __DIR__ . '/data/config.php';

@@ -7,6 +7,7 @@ $msg = '';
 
 // 削除（論理削除）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    verify_csrf();
     $id = (int)$_POST['id'];
     $db->prepare("UPDATE members SET active=0 WHERE id=?")->execute([$id]);
     $msg = '部員を削除しました。';
@@ -247,6 +248,7 @@ function sort_link($label, $key, $cur_sort, $cur_dir, $tab, $school_tab, $grade_
                         <div class="flex gap-8 action-btns">
                             <a href="/member_edit.php?id=<?= h($m['id']) ?>" class="btn btn-outline btn-sm">編集</a>
                             <form method="post" onsubmit="return confirm('<?= h($m['name']) ?>を削除しますか？')">
+                                <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= h($m['id']) ?>">
                                 <button type="submit" class="btn btn-danger btn-sm">削除</button>

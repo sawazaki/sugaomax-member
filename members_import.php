@@ -8,6 +8,7 @@ $results = [];
 $done    = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
     $file = $_FILES['csv'] ?? null;
 
     if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
@@ -156,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
             <div class="form-group">
                 <label>CSVファイル</label>
                 <input type="file" name="csv" accept=".csv" class="form-control" required>

@@ -9,8 +9,10 @@ if (!empty($_SESSION['logged_in'])) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
     $password = $_POST['password'] ?? '';
     if (defined('APP_PASSWORD_HASH') && password_verify($password, APP_PASSWORD_HASH)) {
+        session_regenerate_id(true);
         $_SESSION['logged_in'] = true;
         header('Location: /index.php');
         exit;
@@ -38,6 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="alert alert-danger"><?= h($error) ?></div>
             <?php endif; ?>
             <form method="post">
+                <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                 <div class="form-group">
                     <label for="password">パスワード</label>
                     <input type="password" id="password" name="password" class="form-control" autofocus required>

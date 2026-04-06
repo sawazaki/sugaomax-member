@@ -7,6 +7,7 @@ $msg = '';
 
 // 削除
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    verify_csrf();
     $id = (int)$_POST['id'];
     $db->prepare("DELETE FROM match_members WHERE match_id=?")->execute([$id]);
     $db->prepare("DELETE FROM matches WHERE id=?")->execute([$id]);
@@ -74,6 +75,7 @@ $matches = $db->query("
                             <a href="/match_sheet.php?id=<?= h($m['id']) ?>" class="btn btn-outline btn-sm">メンバー表</a>
                             <a href="/match_new.php?id=<?= h($m['id']) ?>" class="btn btn-secondary btn-sm">編集</a>
                             <form method="post" onsubmit="return confirm('この試合を削除しますか？')">
+                                <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= h($m['id']) ?>">
                                 <button type="submit" class="btn btn-danger btn-sm">削除</button>

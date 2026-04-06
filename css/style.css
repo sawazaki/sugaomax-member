@@ -38,31 +38,48 @@ a:hover { text-decoration: underline; }
     display: flex;
     gap: 4px;
     flex: 1;
+    align-items: center;
 }
 
-.navbar-menu a {
+.navbar-menu a,
+.navbar-link {
     color: #cbd5e1;
     padding: 6px 14px;
     border-radius: 4px;
     display: block;
     transition: background .15s, color .15s;
+    font: inherit;
+    background: transparent;
+    border: none;
+    cursor: pointer;
 }
 
 .navbar-menu a:hover,
-.navbar-menu a.active {
+.navbar-menu a.active,
+.navbar-link:hover,
+.navbar-link.active {
     background: #2563eb;
     color: #fff;
     text-decoration: none;
 }
 
-.navbar-menu a.logout {
+.navbar-menu-spacer {
     margin-left: auto;
+}
+
+.navbar-menu a.logout,
+.navbar-link.logout {
     color: #fca5a5;
 }
 
-.navbar-menu a.logout:hover {
+.navbar-menu a.logout:hover,
+.navbar-link.logout:hover {
     background: #dc2626;
     color: #fff;
+}
+
+.navbar-logout-form {
+    margin: 0;
 }
 
 /* ===== Layout ===== */
@@ -403,8 +420,9 @@ select.form-control { background: #fff; }
     .navbar-brand { margin-right: 0; flex: 1; }
     .navbar-menu { width: 100%; flex-wrap: wrap; gap: 2px; }
     .navbar-menu li { flex: 0 0 auto; }
-    .navbar-menu a { padding: 5px 10px; font-size: 12px; }
-    .navbar-menu a.logout { margin-left: 0; }
+    .navbar-menu a,
+    .navbar-link { padding: 5px 10px; font-size: 12px; }
+    .navbar-menu-spacer { margin-left: 0; }
 
     /* Container */
     .container { padding: 12px 10px; }
@@ -457,16 +475,20 @@ select.form-control { background: #fff; }
 }
 
 /* ===== 公式メンバー表（印刷専用）A4縦 2×2 4枚配置 ===== */
-/* Excelテンプレート準拠: 各シート約99mm幅 / 全18列均等(5.5mm)、名前7列分 */
+/* Excelテンプレート準拠: 2列×2行 / 選手行5.2mm×20行で高さを抑制 */
+/* 幅は印刷可能域の100%を使用（Safariのマージン差異に対応） */
 
 .official-sheet-grid {
-    flex-wrap: wrap;
     gap: 2mm;
+    width: 100%;
     font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 .official-sheet-cell {
     flex: 0 0 calc(50% - 1mm);
+    width: calc(50% - 1mm);
     box-sizing: border-box;
     overflow: hidden;
     page-break-inside: avoid;
@@ -495,10 +517,11 @@ select.form-control { background: #fff; }
     vertical-align: middle;
     overflow: hidden;
     white-space: nowrap;
+    line-height: 1;
 }
 
-/* チーム・タイムアウトヘッダー行（Excel行1-3: 各13.5pt = 4.8mm） */
-.official-table .team-header-row { height: 3.8mm; }
+/* チーム・タイムアウトヘッダー行 */
+.official-table .team-header-row { height: 3.5mm; max-height: 3.5mm; }
 .official-table .team-label-cell {
     text-align: left;
     padding-left: 1mm;
@@ -527,7 +550,7 @@ select.form-control { background: #fff; }
 .official-table .timeout-mark-cell   { font-size: 6.5pt; }
 
 /* 列ヘッダー行 */
-.official-table .col-header-row { height: 3mm; }
+.official-table .col-header-row { height: 3mm; max-height: 3mm; }
 .official-table .h-no     { font-size: 5pt; }
 .official-table .h-name   { font-size: 5pt; line-height: 1.1; }
 .official-table .h-name-sub { font-size: 4.5pt; }
@@ -537,13 +560,13 @@ select.form-control { background: #fff; }
 .official-table .h-sub          { font-size: 5.5pt; }
 
 /* 選手行 */
-.official-table .player-row { height: 5.7mm; }
+.official-table .player-row { height: 5.2mm; max-height: 5.2mm; }
 .official-table .cell-no     { font-size: 6pt; }
 .official-table .cell-name   { text-align: left; padding-left: 1mm; font-size: 7pt; }
 .official-table .cell-jersey { font-size: 7pt; }
 
 /* コーチ行 */
-.official-table .coach-row { height: 3.5mm; }
+.official-table .coach-row { height: 3.5mm; max-height: 3.5mm; }
 .official-table .coach-cell {
     text-align: left;
     padding-left: 2mm;

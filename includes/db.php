@@ -1,6 +1,12 @@
 <?php
 define('DB_PATH', __DIR__ . '/../data/minibasket.db');
 
+$session_secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+session_set_cookie_params([
+    'httponly' => true,
+    'secure' => $session_secure,
+    'samesite' => 'Lax',
+]);
 session_start();
 
 // パスワード設定ファイル（data/ はGitignore済み）
@@ -24,6 +30,38 @@ function require_login()
 function h($str)
 {
     return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
+}
+
+function csrf_token()
+{
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+function verify_csrf()
+{
+    $token = $_POST['csrf_token'] ?? '';
+    $session_token = $_SESSION['csrf_token'] ?? '';
+
+    if (!is_string($token) || !is_string($session_token) || $session_token === '' || !hash_equals($session_token, $token)) {
+        http_response_code(400);
+        exit('Invalid CSRF token.');
+    }
+}
+
+function csv_safe($value)
+{
+    $value = (string)$value;
+    $trimmed = ltrim($value);
+
+    if ($trimmed !== '' && preg_match('/^[=+\-@]/u', $trimmed)) {
+        return "'" . $value;
+    }
+
+    return $value;
 }
 
 function get_db()

@@ -22,6 +22,7 @@ $msg   = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
     $name            = trim($_POST['name'] ?? '');
     $grade           = (int)($_POST['grade'] ?? 0);
     $gender          = in_array($_POST['gender'] ?? '', ['男子', '女子']) ? $_POST['gender'] : null;
@@ -68,6 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="card" style="max-width:640px">
             <form method="post">
+                <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                 <div class="form-row">
                     <div class="form-group">
                         <label>氏名 <span style="color:red">*</span></label>

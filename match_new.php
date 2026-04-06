@@ -14,6 +14,7 @@ if (isset($_GET['id'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
     $match_date       = trim($_POST['match_date'] ?? '');
     $opponent         = trim($_POST['opponent'] ?? '');
     $title            = trim($_POST['title'] ?? '') ?: null;
@@ -60,6 +61,7 @@ $is_edit = $match !== null;
 
     <div class="card" style="max-width:600px">
         <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
             <?php if ($is_edit): ?>
                 <input type="hidden" name="id" value="<?= h($match['id']) ?>">
             <?php endif; ?>

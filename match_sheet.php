@@ -27,6 +27,7 @@ if (!$match) {
 
 // 保存（member[] は送信順 = 表示順）
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
     $db->prepare("DELETE FROM match_members WHERE match_id=?")->execute([$id]);
     $selected  = $_POST['member'] ?? [];
     $positions = $_POST['position'] ?? [];
@@ -105,6 +106,7 @@ $print_rows = array_pad(array_slice($sheet_members, 0, 20), 20, null);
     <?php if ($msg): ?><div class="alert alert-success no-print"><?= h($msg) ?></div><?php endif; ?>
 
     <form method="post" id="sheetForm" onsubmit="prepareSubmit()">
+    <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
     <div id="memberOrderInputs"></div><!-- JS がここに hidden input を挿入 -->
     <div class="sheet-layout">
         <!-- 左：選手選択パネル -->
