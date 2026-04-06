@@ -7,6 +7,7 @@ $current = basename($_SERVER['PHP_SELF']);
         <li><a href="/index.php" class="<?= $current === 'index.php' ? 'active' : '' ?>">ダッシュボード</a></li>
         <li><a href="/members.php" class="<?= $current === 'members.php' ? 'active' : '' ?>">部員管理</a></li>
         <li><a href="/matches.php" class="<?= in_array($current, ['matches.php', 'match_new.php', 'match_sheet.php']) ? 'active' : '' ?>">試合管理</a></li>
+        <li><a href="/duty.php" class="<?= $current === 'duty.php' ? 'active' : '' ?>">当番</a></li>
         <li class="navbar-menu-spacer"></li>
         <li>
             <form method="post" action="/logout.php" class="navbar-logout-form">

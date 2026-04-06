@@ -27,6 +27,12 @@ function require_login()
     }
 }
 
+function member_name($m)
+{
+    $fn = $m['first_name'] ?? '';
+    return ($m['last_name'] ?? '') . ($fn !== '' ? '　' . $fn : '');
+}
+
 function h($str)
 {
     return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
@@ -81,14 +87,17 @@ function get_db()
 
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS members (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            name       TEXT    NOT NULL,
-            grade      INTEGER NOT NULL,
-            number     INTEGER,
-            school     TEXT,
-            height     INTEGER,
-            active     INTEGER NOT NULL DEFAULT 1,
-            created_at TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            last_name      TEXT    NOT NULL DEFAULT '',
+            first_name     TEXT    NOT NULL DEFAULT '',
+            grade          INTEGER NOT NULL,
+            number         INTEGER,
+            school         TEXT,
+            height         INTEGER,
+            practice_duty  TEXT,
+            match_duty     TEXT,
+            active         INTEGER NOT NULL DEFAULT 1,
+            created_at     TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
         )
     ");
 
@@ -129,6 +138,40 @@ function get_db()
     }
     if (!in_array('romaji', $existing_members)) {
         $pdo->exec("ALTER TABLE members ADD COLUMN romaji TEXT");
+    }
+    if (!in_array('practice_duty', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN practice_duty TEXT");
+    }
+    if (!in_array('match_duty', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN match_duty TEXT");
+    }
+    if (!in_array('has_sibling', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN has_sibling INTEGER NOT NULL DEFAULT 0");
+    }
+    // name → last_name / first_name への分割マイグレーション
+    if (in_array('name', $existing_members)) {
+        if (!in_array('last_name', $existing_members)) {
+            $pdo->exec("ALTER TABLE members ADD COLUMN last_name TEXT NOT NULL DEFAULT ''");
+        }
+        if (!in_array('first_name', $existing_members)) {
+            $pdo->exec("ALTER TABLE members ADD COLUMN first_name TEXT NOT NULL DEFAULT ''");
+        }
+        // 全角スペース → 半角スペースの順で分割、スペースなしの場合は全体を姓に
+        $pdo->exec("
+            UPDATE members SET
+                last_name = CASE
+                    WHEN INSTR(name, '\u{3000}') > 0 THEN TRIM(SUBSTR(name, 1, INSTR(name, '\u{3000}') - 1))
+                    WHEN INSTR(name, ' ')         > 0 THEN TRIM(SUBSTR(name, 1, INSTR(name, ' ') - 1))
+                    ELSE TRIM(name)
+                END,
+                first_name = CASE
+                    WHEN INSTR(name, '\u{3000}') > 0 THEN TRIM(SUBSTR(name, INSTR(name, '\u{3000}') + 1))
+                    WHEN INSTR(name, ' ')         > 0 THEN TRIM(SUBSTR(name, INSTR(name, ' ') + 1))
+                    ELSE ''
+                END
+            WHERE last_name = '' AND first_name = ''
+        ");
+        $pdo->exec("ALTER TABLE members DROP COLUMN name");
     }
 
     $existing_matches = array_column($pdo->query("PRAGMA table_info(matches)")->fetchAll(), 'name');

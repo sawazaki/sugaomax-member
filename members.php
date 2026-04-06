@@ -25,7 +25,7 @@ $known_grades = [1, 2, 3, 4, 5, 6];
 $grade_tab = in_array((int)($_GET['grade'] ?? 0), $known_grades) ? (int)$_GET['grade'] : 'ALL';
 
 // ソート
-$sort_cols = ['grade' => 'grade', 'number' => 'number', 'name' => 'name', 'gender' => 'gender', 'school' => 'school', 'reversible_bibs' => 'reversible_bibs', 'blue_bibs' => 'blue_bibs'];
+$sort_cols = ['grade' => 'grade', 'number' => 'number', 'last_name' => 'last_name', 'gender' => 'gender', 'school' => 'school', 'reversible_bibs' => 'reversible_bibs', 'blue_bibs' => 'blue_bibs'];
 $sort = isset($sort_cols[$_GET['sort'] ?? '']) ? $_GET['sort'] : 'grade';
 $dir  = ($_GET['dir'] ?? '') === 'asc' ? 'asc' : (($_GET['dir'] ?? '') === 'desc' ? 'desc' : ($sort === 'grade' ? 'desc' : 'asc'));
 $col  = $sort_cols[$sort];
@@ -53,7 +53,7 @@ if ($grade_tab !== 'ALL') {
 }
 
 $where = implode(' AND ', $where_parts);
-$sql = "SELECT * FROM members WHERE {$where} ORDER BY {$col} {$dir}, name asc";
+$sql = "SELECT * FROM members WHERE {$where} ORDER BY {$col} {$dir}, last_name asc, first_name asc";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $members = $stmt->fetchAll();
@@ -226,11 +226,13 @@ function sort_link($label, $key, $cur_sort, $cur_dir, $tab, $school_tab, $grade_
                 <tr>
                     <th><?= sort_link('学年', 'grade', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
                     <th><?= sort_link('#', 'number', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
-                    <th><?= sort_link('氏名', 'name', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
+                    <th><?= sort_link('氏名', 'last_name', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
                     <th><?= sort_link('性別', 'gender', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
                     <th><?= sort_link('所属校', 'school', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
                     <th><?= sort_link('リバビブ', 'reversible_bibs', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
                     <th><?= sort_link('青ビブ', 'blue_bibs', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
+                    <th>練習当番</th>
+                    <th>試合当番</th>
                     <th></th>
                 </tr>
             </thead>
@@ -239,15 +241,17 @@ function sort_link($label, $key, $cur_sort, $cur_dir, $tab, $school_tab, $grade_
                 <tr>
                     <td><?= h($m['grade']) ?>年</td>
                     <td><?= $m['number'] !== null ? h($m['number']) : '—' ?></td>
-                    <td style="white-space:nowrap"><a href="/member_edit.php?id=<?= h($m['id']) ?>"><?= h($m['name']) ?></a></td>
+                    <td style="white-space:nowrap"><a href="/member_edit.php?id=<?= h($m['id']) ?>"><?= h(member_name($m)) ?></a></td>
                     <td><?= h($m['gender'] ?? '—') ?></td>
                     <td style="white-space:nowrap"><?= h($m['school'] ?? '—') ?></td>
                     <td style="text-align:center"><?= ($m['reversible_bibs'] ?? 0) ?: '' ?></td>
                     <td style="text-align:center"><?= ($m['blue_bibs'] ?? 0) ?: '' ?></td>
+                    <td style="text-align:center"><?= h($m['practice_duty'] ?? '—') ?></td>
+                    <td style="text-align:center"><?= h($m['match_duty'] ?? '—') ?></td>
                     <td>
                         <div class="flex gap-8 action-btns">
                             <a href="/member_edit.php?id=<?= h($m['id']) ?>" class="btn btn-outline btn-sm">編集</a>
-                            <form method="post" onsubmit="return confirm('<?= h($m['name']) ?>を削除しますか？')">
+                            <form method="post" onsubmit="return confirm('<?= h(member_name($m)) ?>を削除しますか？')">
                                 <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= h($m['id']) ?>">

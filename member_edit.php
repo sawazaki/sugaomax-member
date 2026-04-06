@@ -23,7 +23,8 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    $name            = trim($_POST['name'] ?? '');
+    $last_name       = trim($_POST['last_name'] ?? '');
+    $first_name      = trim($_POST['first_name'] ?? '');
     $grade           = (int)($_POST['grade'] ?? 0);
     $gender          = in_array($_POST['gender'] ?? '', ['男子', '女子']) ? $_POST['gender'] : null;
     $romaji          = trim($_POST['romaji'] ?? '') ?: null;
@@ -32,12 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $height          = $_POST['height'] !== '' ? (int)$_POST['height'] : null;
     $reversible_bibs = $_POST['reversible_bibs'] !== '' ? (int)$_POST['reversible_bibs'] : 0;
     $blue_bibs       = $_POST['blue_bibs'] !== '' ? (int)$_POST['blue_bibs'] : 0;
+    $practice_duty   = in_array($_POST['practice_duty'] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $_POST['practice_duty'] : null;
+    $match_duty      = in_array($_POST['match_duty'] ?? '', ['1','2','3','4']) ? $_POST['match_duty'] : null;
+    $has_sibling     = !empty($_POST['has_sibling']) ? 1 : 0;
 
-    if ($name === '' || $grade < 1 || $grade > 6) {
-        $error = '氏名と学年は必須です。';
+    if ($last_name === '' || $grade < 1 || $grade > 6) {
+        $error = '姓と学年は必須です。';
     } else {
-        $stmt = $db->prepare("UPDATE members SET name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=? WHERE id=?");
-        $stmt->execute([$name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $id]);
+        $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=? WHERE id=?");
+        $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $id]);
         $msg = '更新しました。';
         // 最新データを再取得
         $stmt = $db->prepare("SELECT * FROM members WHERE id=?");
@@ -52,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= h($m['name']) ?> - 部員編集 - 菅生マックス</title>
+    <title><?= h(member_name($m)) ?> - 部員編集 - 菅生マックス</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 
@@ -60,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php require __DIR__ . '/includes/nav.php'; ?>
     <div class="container">
         <div class="flex items-center justify-between mb-16">
-            <h1 class="page-title" style="margin-bottom:0"><?= h($m['name']) ?></h1>
+            <h1 class="page-title" style="margin-bottom:0"><?= h(member_name($m)) ?></h1>
             <a href="/members.php" class="btn btn-secondary btn-sm">← 部員一覧へ</a>
         </div>
 
@@ -72,9 +76,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                 <div class="form-row">
                     <div class="form-group">
-                        <label>氏名 <span style="color:red">*</span></label>
-                        <input type="text" name="name" class="form-control" required
-                            value="<?= h($m['name']) ?>">
+                        <label>姓 <span style="color:red">*</span></label>
+                        <input type="text" name="last_name" class="form-control" required
+                            value="<?= h($m['last_name']) ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>名</label>
+                        <input type="text" name="first_name" class="form-control"
+                            value="<?= h($m['first_name'] ?? '') ?>">
                     </div>
                     <div class="form-group">
                         <label>ローマ字表記</label>
@@ -117,6 +126,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label>練習当番</label>
+                        <select name="practice_duty" class="form-control">
+                            <option value="">未設定</option>
+                            <?php foreach (range('A', 'K') as $v): ?>
+                                <option value="<?= $v ?>" <?= ($m['practice_duty'] ?? '') === $v ? 'selected' : '' ?>><?= $v ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>試合当番</label>
+                        <select name="match_duty" class="form-control">
+                            <option value="">未設定</option>
+                            <?php foreach (['1','2','3','4'] as $v): ?>
+                                <option value="<?= $v ?>" <?= ($m['match_duty'] ?? '') === $v ? 'selected' : '' ?>><?= $v ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label>リバーシブルビブス番号</label>
                         <input type="number" name="reversible_bibs" class="form-control" min="0" max="99"
                             value="<?= h(($m['reversible_bibs'] ?? 0) ?: '') ?>">
@@ -126,6 +155,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="number" name="blue_bibs" class="form-control" min="0" max="99"
                             value="<?= h(($m['blue_bibs'] ?? 0) ?: '') ?>">
                     </div>
+                </div>
+                <div style="margin-bottom:16px;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+                        <input type="checkbox" name="has_sibling" value="1" <?= !empty($m['has_sibling']) ? 'checked' : '' ?> style="width:16px;height:16px;">
+                        兄弟あり（当番表から除外）
+                    </label>
                 </div>
                 <div class="flex gap-8 mt-8">
                     <button type="submit" class="btn btn-primary">更新する</button>

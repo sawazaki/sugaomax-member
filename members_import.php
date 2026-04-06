@@ -40,13 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $skipped    = 0;
             $row_errors = [];
 
-            $stmt = $db->prepare("INSERT INTO members (name, grade, number, school, height, reversible_bibs, blue_bibs) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $db->prepare("INSERT INTO members (last_name, first_name, grade, number, school, height, reversible_bibs, blue_bibs, practice_duty, match_duty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
             while (($cols = fgetcsv($handle)) !== false) {
                 $row_num++;
 
-                // ヘッダー行スキップ（1行目が「氏名」で始まる場合）
-                if ($row_num === 1 && isset($cols[0]) && mb_strpos($cols[0], '氏名') !== false) {
+                // ヘッダー行スキップ（1行目が「姓」「氏名」で始まる場合）
+                if ($row_num === 1 && isset($cols[0]) && (mb_strpos($cols[0], '姓') !== false || mb_strpos($cols[0], '氏名') !== false)) {
                     continue;
                 }
 
@@ -57,29 +57,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $cols = array_map('trim', $cols);
 
-                $name   = $cols[0] ?? '';
-                $grade  = isset($cols[1]) && $cols[1] !== '' ? (int)$cols[1] : null;
-                $number = isset($cols[2]) && $cols[2] !== '' ? (int)$cols[2] : null;
-                $school = $cols[3] !== '' ? $cols[3] : null;
-                $height          = isset($cols[4]) && $cols[4] !== '' ? (int)$cols[4] : null;
-                $reversible_bibs = isset($cols[5]) && trim($cols[5]) !== '' ? (int)$cols[5] : null;
-                $blue_bibs       = isset($cols[6]) && trim($cols[6]) !== '' ? (int)$cols[6] : null;
+                $last_name  = $cols[0] ?? '';
+                $first_name = $cols[1] ?? '';
+                $grade  = isset($cols[2]) && $cols[2] !== '' ? (int)$cols[2] : null;
+                $number = isset($cols[3]) && $cols[3] !== '' ? (int)$cols[3] : null;
+                $school = ($cols[4] ?? '') !== '' ? $cols[4] : null;
+                $height          = isset($cols[5]) && $cols[5] !== '' ? (int)$cols[5] : null;
+                $reversible_bibs = isset($cols[6]) && trim($cols[6]) !== '' ? (int)$cols[6] : null;
+                $blue_bibs       = isset($cols[7]) && trim($cols[7]) !== '' ? (int)$cols[7] : null;
+                $practice_duty   = in_array($cols[8] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $cols[8] : null;
+                $match_duty      = in_array($cols[9] ?? '', ['1','2','3','4']) ? $cols[9] : null;
 
                 // バリデーション
                 $row_err = [];
-                if ($name === '') $row_err[] = '氏名が空です';
+                if ($last_name === '') $row_err[] = '姓が空です';
                 if ($grade === null || $grade < 1 || $grade > 6) $row_err[] = '学年が不正です（1〜6）';
                 if ($number !== null && ($number < 0 || $number > 99)) $row_err[] = '背番号が不正です（0〜99）';
                 if ($height !== null && ($height < 80 || $height > 220)) $row_err[] = '身長が不正です（80〜220）';
 
                 if (!empty($row_err)) {
-                    $row_errors[] = "{$row_num}行目「" . h($name) . "」: " . implode('、', $row_err);
+                    $row_errors[] = "{$row_num}行目「" . h($last_name . ' ' . $first_name) . "」: " . implode('、', $row_err);
                     $skipped++;
                     continue;
                 }
 
-                $stmt->execute([$name, $grade, $number, $school, $height, $reversible_bibs, $blue_bibs]);
-                $results[] = ['name' => $name, 'grade' => $grade, 'number' => $number, 'school' => $school, 'height' => $height, 'reversible_bibs' => $reversible_bibs, 'blue_bibs' => $blue_bibs];
+                $stmt->execute([$last_name, $first_name, $grade, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty]);
+                $results[] = ['last_name' => $last_name, 'first_name' => $first_name, 'grade' => $grade, 'number' => $number, 'school' => $school, 'height' => $height, 'reversible_bibs' => $reversible_bibs, 'blue_bibs' => $blue_bibs, 'practice_duty' => $practice_duty, 'match_duty' => $match_duty];
                 $imported++;
             }
             fclose($handle);
@@ -114,12 +117,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>氏名</th><th>学年</th><th>#</th><th>所属校</th><th>身長</th><th>リバビブ</th><th>青ビブ</th></tr>
+                    <tr><th>姓</th><th>名</th><th>学年</th><th>#</th><th>所属校</th><th>身長</th><th>リバビブ</th><th>青ビブ</th></tr>
                 </thead>
                 <tbody>
                 <?php foreach ($results as $r): ?>
                     <tr>
-                        <td><?= h($r['name']) ?></td>
+                        <td><?= h($r['last_name']) ?></td>
+                        <td><?= h($r['first_name']) ?></td>
                         <td><?= h($r['grade']) ?>年</td>
                         <td><?= $r['number'] !== null ? h($r['number']) : '—' ?></td>
                         <td><?= h($r['school'] ?? '—') ?></td>
@@ -151,8 +155,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="alert alert-info" style="margin-bottom:16px;">
             <strong>CSVフォーマット（1行目はヘッダー行として自動スキップ）</strong><br>
-            <code style="font-size:12px;">氏名,学年,背番号,所属校,身長(cm),リバーシブルビブス,青ビブス</code><br>
-            <span style="font-size:12px;">例: <code>山田太郎,6,5,○○小学校,145,1,0</code></span><br>
+            <code style="font-size:12px;">姓,名,学年,背番号,所属校,身長(cm),リバーシブルビブス,青ビブス,練習当番,試合当番</code><br>
+            <span style="font-size:12px;">例: <code>山田,太郎,6,5,○○小学校,145,1,0,A,1</code></span><br>
+            <span style="font-size:12px;">※ 練習当番はA〜K、試合当番は1〜4。省略可。</span><br>
             <span style="font-size:12px;">※ 背番号・所属校・身長・ビブス番号は省略可。文字コードはUTF-8またはShift_JIS。</span>
         </div>
 

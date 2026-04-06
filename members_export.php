@@ -5,15 +5,18 @@ require_login();
 $all_fields = [
     'grade'           => '学年',
     'number'          => '背番号',
-    'name'            => '氏名',
+    'last_name'       => '姓',
+    'first_name'      => '名',
     'romaji'          => 'ローマ字',
     'gender'          => '性別',
     'school'          => '所属校',
     'height'          => '身長',
     'reversible_bibs' => 'リバビブ',
     'blue_bibs'       => '青ビブ',
+    'practice_duty'   => '練習当番',
+    'match_duty'      => '試合当番',
 ];
-$required_fields = ['grade', 'name'];
+$required_fields = ['grade', 'last_name'];
 
 // CSVダウンロード処理
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'export') {
@@ -26,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'expor
     }
 
     $db = get_db();
-    $members = $db->query("SELECT * FROM members WHERE active=1 ORDER BY grade DESC, number, name")->fetchAll();
+    $members = $db->query("SELECT * FROM members WHERE active=1 ORDER BY grade DESC, number, last_name, first_name")->fetchAll();
 
     header('Content-Type: text/csv; charset=UTF-8');
     header('Content-Disposition: attachment; filename="sugaomax_member_' . date('YmdHi') . '.csv"');

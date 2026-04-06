@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // 全部員（在籍中）
-$all_members = $db->query("SELECT * FROM members WHERE active=1 ORDER BY grade DESC, number, name")->fetchAll();
+$all_members = $db->query("SELECT * FROM members WHERE active=1 ORDER BY grade DESC, number, last_name, first_name")->fetchAll();
 
 // 登録済みメンバー（sort_order 順）
 $saved_rows = $db->prepare("SELECT member_id, position FROM match_members WHERE match_id=? ORDER BY sort_order");
@@ -129,7 +129,7 @@ $print_rows = array_pad(array_slice($sheet_members, 0, 20), 20, null);
                            onchange="toggleMember(<?= h($m['id']) ?>)">
                     <label for="chk-<?= h($m['id']) ?>">
                         <?php if ($m['number'] !== null): ?><strong>#<?= h($m['number']) ?></strong> <?php endif; ?>
-                        <?= h($m['name']) ?>
+                        <?= h(member_name($m)) ?>
                         <span class="text-muted"><?= h($m['grade']) ?>年</span>
                     </label>
                 </div>
@@ -172,7 +172,7 @@ $print_rows = array_pad(array_slice($sheet_members, 0, 20), 20, null);
                         <tr data-id="<?= h($m['id']) ?>">
                             <td class="drag-handle" title="ドラッグで並べ替え">☰</td>
                             <td><?= $m['number'] !== null ? h($m['number']) : '—' ?></td>
-                            <td><?= h($m['name']) ?></td>
+                            <td><?= h(member_name($m)) ?></td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -241,7 +241,7 @@ $print_rows = array_pad(array_slice($sheet_members, 0, 20), 20, null);
                 <?php foreach ($print_rows as $i => $m): ?>
                     <tr class="player-row">
                         <td class="cell-no"><?= $i + 1 ?></td>
-                        <td class="cell-name"><?= $m ? h($m['name']) : '' ?></td>
+                        <td class="cell-name"><?= $m ? h(member_name($m)) : '' ?></td>
                         <td class="cell-jersey"><?= ($m && $m['number'] !== null) ? h($m['number']) : '' ?></td>
                         <td></td><td></td><td></td><td></td>
                         <td></td><td></td><td></td><td></td><td></td>
@@ -304,7 +304,7 @@ function renderPreview() {
         return `<tr data-id="${id}" draggable="true">
             <td class="drag-handle" title="ドラッグで並べ替え">☰</td>
             <td>${m.number !== null ? e(m.number) : '—'}</td>
-            <td>${e(m.name)}</td>
+            <td>${e((m.last_name || '') + (m.first_name ? '\u3000' + m.first_name : ''))}</td>
         </tr>`;
     }).join('');
 
