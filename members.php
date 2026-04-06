@@ -231,8 +231,6 @@ function sort_link($label, $key, $cur_sort, $cur_dir, $tab, $school_tab, $grade_
                     <th><?= sort_link('所属校', 'school', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
                     <th><?= sort_link('リバビブ', 'reversible_bibs', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
                     <th><?= sort_link('青ビブ', 'blue_bibs', $sort, $dir, $tab, $school_tab, $grade_tab) ?></th>
-                    <th>練習当番</th>
-                    <th>試合当番</th>
                     <th></th>
                 </tr>
             </thead>
@@ -246,8 +244,6 @@ function sort_link($label, $key, $cur_sort, $cur_dir, $tab, $school_tab, $grade_
                     <td style="white-space:nowrap"><?= h($m['school'] ?? '—') ?></td>
                     <td style="text-align:center"><?= ($m['reversible_bibs'] ?? 0) ?: '' ?></td>
                     <td style="text-align:center"><?= ($m['blue_bibs'] ?? 0) ?: '' ?></td>
-                    <td style="text-align:center"><?= h($m['practice_duty'] ?? '—') ?></td>
-                    <td style="text-align:center"><?= h($m['match_duty'] ?? '—') ?></td>
                     <td>
                         <div class="flex gap-8 action-btns">
                             <a href="/member_edit.php?id=<?= h($m['id']) ?>" class="btn btn-outline btn-sm">編集</a>

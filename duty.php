@@ -39,27 +39,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 
 // ── 表示データ取得 ────────────────────────────────────────
 $practice_groups = [];
-foreach (range('A', 'K') as $key) { $practice_groups[$key] = []; }
+foreach (range('A', 'K') as $key) {
+    $practice_groups[$key] = [];
+}
 foreach ($db->query("SELECT * FROM members WHERE active=1 AND practice_duty IS NOT NULL AND practice_duty != '' AND has_sibling = 0 ORDER BY grade DESC, last_name, first_name")->fetchAll() as $m) {
     if (isset($practice_groups[$m['practice_duty']])) $practice_groups[$m['practice_duty']][] = $m;
 }
 
 $match_groups = [];
-foreach (['1','2','3','4'] as $key) { $match_groups[$key] = []; }
+foreach (['1', '2', '3', '4'] as $key) {
+    $match_groups[$key] = [];
+}
 foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT NULL AND match_duty != '' AND has_sibling = 0 ORDER BY grade DESC, last_name, first_name")->fetchAll() as $m) {
     if (isset($match_groups[$m['match_duty']])) $match_groups[$m['match_duty']][] = $m;
 }
 ?>
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>当番一覧 - 菅生マックス チーム管理</title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
-        .duty-section { margin-bottom: 40px; }
-        .duty-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .duty-section {
+            margin-bottom: 40px;
+        }
+
+        .duty-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
         .duty-table th {
             background: #1e3a5f;
             color: #fff;
@@ -69,13 +82,20 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
             white-space: nowrap;
             width: 56px;
         }
+
         .duty-table td {
             border: 1px solid #e2e8f0;
             padding: 6px 8px;
             vertical-align: middle;
         }
-        .duty-table tr:nth-child(even) td { background: #f8fafc; }
-        .duty-table tr:nth-child(even) td.drop-zone { background: #f8fafc; }
+
+        .duty-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        .duty-table tr:nth-child(even) td.drop-zone {
+            background: #f8fafc;
+        }
 
         .duty-members {
             display: flex;
@@ -86,6 +106,7 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
             border-radius: 4px;
             transition: background .15s;
         }
+
         .duty-members.drag-over {
             background: #dbeafe;
             outline: 2px dashed #3b82f6;
@@ -105,8 +126,16 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
             user-select: none;
             transition: opacity .15s, box-shadow .15s;
         }
-        .duty-member:active { cursor: grabbing; }
-        .duty-member.dragging { opacity: 0.35; box-shadow: none; }
+
+        .duty-member:active {
+            cursor: grabbing;
+        }
+
+        .duty-member.dragging {
+            opacity: 0.35;
+            box-shadow: none;
+        }
+
         .duty-member .grade-badge {
             font-size: 11px;
             color: #2563eb;
@@ -118,6 +147,7 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
             font-size: 13px;
             padding: 4px 0;
         }
+
         .duty-count {
             font-size: 13px;
             color: #475569;
@@ -132,199 +162,299 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
             border-radius: 4px;
             transition: opacity .3s;
         }
-        #save-status.saving  { color: #2563eb; }
-        #save-status.saved   { color: #16a34a; }
-        #save-status.error   { color: #dc2626; }
+
+        #save-status.saving {
+            color: #2563eb;
+        }
+
+        #save-status.saved {
+            color: #16a34a;
+        }
+
+        #save-status.error {
+            color: #dc2626;
+        }
     </style>
 </head>
+
 <body>
-<?php require __DIR__ . '/includes/nav.php'; ?>
-<div class="container">
-    <div class="flex items-center justify-between mb-16">
-        <h1 class="page-title" style="margin-bottom:0">当番一覧</h1>
-        <span id="save-status"></span>
-    </div>
+    <?php require __DIR__ . '/includes/nav.php'; ?>
+    <div class="container">
+        <div class="flex items-center justify-between mb-16">
+            <h1 class="page-title" style="margin-bottom:0">当番一覧</h1>
+            <span id="save-status"></span>
+        </div>
 
-    <?php
-    // テーブル描画を関数化して練習・試合で共用
-    function render_duty_table(array $groups, string $type): void {
-    ?>
-    <div class="table-wrap">
-    <table class="duty-table">
-        <thead>
-            <tr>
-                <th>当番</th>
-                <th style="width:auto; text-align:left; padding-left:12px;">メンバー（ドラッグで移動）</th>
-                <th style="width:48px;">人数</th>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($groups as $key => $members): ?>
-            <tr>
-                <td style="text-align:center; font-weight:bold; font-size:16px; color:#1e3a5f; background:#f1f5f9;">
-                    <?= h($key) ?>
-                </td>
-                <td class="drop-zone" data-type="<?= h($type) ?>" data-key="<?= h($key) ?>">
-                    <div class="duty-members" data-type="<?= h($type) ?>" data-key="<?= h($key) ?>">
-                        <?php if (empty($members)): ?>
-                            <span class="duty-empty">未設定</span>
-                        <?php else: ?>
-                            <?php foreach ($members as $m): ?>
-                                <span class="duty-member" draggable="true"
-                                      data-member-id="<?= h($m['id']) ?>"
-                                      data-type="<?= h($type) ?>">
-                                    <span class="grade-badge"><?= h($m['grade']) ?>年</span>
-                                    <?= h($m['last_name']) ?>
-                                </span>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </div>
-                </td>
-                <td class="duty-count" data-type="<?= h($type) ?>" data-key="<?= h($key) ?>">
-                    <?= count($members) > 0 ? count($members) . '名' : '—' ?>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-    </div>
-    <?php } ?>
+        <?php
+        // テーブル描画を関数化して練習・試合で共用
+        function render_duty_table(array $groups, string $type): void
+        {
+        ?>
+            <div class="table-wrap">
+                <table class="duty-table">
+                    <thead>
+                        <tr>
+                            <th>当番</th>
+                            <th style="width:auto; text-align:left; padding-left:12px;">メンバー（ドラッグで移動）</th>
+                            <th style="width:48px;">人数</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($groups as $key => $members): ?>
+                            <tr>
+                                <td style="text-align:center; font-weight:bold; font-size:16px; color:#1e3a5f; background:#f1f5f9;">
+                                    <?= h($key) ?>
+                                </td>
+                                <td class="drop-zone" data-type="<?= h($type) ?>" data-key="<?= h($key) ?>">
+                                    <div class="duty-members" data-type="<?= h($type) ?>" data-key="<?= h($key) ?>">
+                                        <?php if (empty($members)): ?>
+                                            <span class="duty-empty">未設定</span>
+                                        <?php else: ?>
+                                            <?php foreach ($members as $m): ?>
+                                                <span class="duty-member" draggable="true"
+                                                    data-member-id="<?= h($m['id']) ?>"
+                                                    data-type="<?= h($type) ?>">
+                                                    <span class="grade-badge"><?= h($m['grade']) ?>年</span>
+                                                    <?= h($m['last_name']) ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                                <td class="duty-count" data-type="<?= h($type) ?>" data-key="<?= h($key) ?>">
+                                    <?= count($members) > 0 ? count($members) . '名' : '—' ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php } ?>
 
-    <!-- 練習当番 -->
-    <div class="duty-section">
-        <div class="card">
-            <div class="card-title">練習当番</div>
-            <?php render_duty_table($practice_groups, 'practice'); ?>
+        <!-- 練習当番 -->
+        <div class="duty-section">
+            <div class="card">
+                <div class="card-title">練習当番</div>
+                <?php render_duty_table($practice_groups, 'practice'); ?>
+            </div>
+        </div>
+
+        <!-- 試合当番 -->
+        <div class="duty-section">
+            <div class="card">
+                <div class="card-title">試合当番</div>
+                <?php render_duty_table($match_groups, 'match'); ?>
+            </div>
         </div>
     </div>
 
-    <!-- 試合当番 -->
-    <div class="duty-section">
-        <div class="card">
-            <div class="card-title">試合当番</div>
-            <?php render_duty_table($match_groups, 'match'); ?>
-        </div>
-    </div>
-</div>
+    <script>
+        const CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
+        const statusEl = document.getElementById('save-status');
+        let dragEl = null;
 
-<script>
-const CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
-const statusEl   = document.getElementById('save-status');
-let dragEl = null;
+        // ── ステータス表示 ───────────────────────────────────────
+        let statusTimer = null;
 
-// ── ステータス表示 ───────────────────────────────────────
-let statusTimer = null;
-function showStatus(msg, cls) {
-    clearTimeout(statusTimer);
-    statusEl.textContent = msg;
-    statusEl.className = cls;
-    if (cls === 'saved') {
-        statusTimer = setTimeout(() => { statusEl.textContent = ''; statusEl.className = ''; }, 2000);
-    }
-}
-
-// ── カウント更新 ─────────────────────────────────────────
-function updateCount(type, key) {
-    const zone  = document.querySelector(`.duty-members[data-type="${type}"][data-key="${key}"]`);
-    const count = zone.querySelectorAll('.duty-member').length;
-    const cell  = document.querySelector(`.duty-count[data-type="${type}"][data-key="${key}"]`);
-    cell.textContent = count > 0 ? count + '名' : '—';
-}
-
-// ── 空表示の制御 ─────────────────────────────────────────
-function syncEmpty(zone) {
-    const placeholder = zone.querySelector('.duty-empty');
-    const hasMembers  = zone.querySelectorAll('.duty-member').length > 0;
-    if (placeholder) {
-        placeholder.style.display = hasMembers ? 'none' : '';
-    } else if (!hasMembers) {
-        const span = document.createElement('span');
-        span.className = 'duty-empty';
-        span.textContent = '未設定';
-        zone.appendChild(span);
-    }
-}
-
-// ── ドラッグイベント ─────────────────────────────────────
-document.addEventListener('dragstart', e => {
-    const el = e.target.closest('.duty-member');
-    if (!el) return;
-    dragEl = el;
-    el.classList.add('dragging');
-    e.dataTransfer.effectAllowed = 'move';
-});
-
-document.addEventListener('dragend', e => {
-    if (dragEl) { dragEl.classList.remove('dragging'); dragEl = null; }
-    document.querySelectorAll('.duty-members.drag-over').forEach(z => z.classList.remove('drag-over'));
-});
-
-document.addEventListener('dragover', e => {
-    const zone = e.target.closest('.duty-members');
-    if (!zone || !dragEl) return;
-    // 同じタイプのみ受け付ける
-    if (zone.dataset.type !== dragEl.dataset.type) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    document.querySelectorAll('.duty-members.drag-over').forEach(z => z !== zone && z.classList.remove('drag-over'));
-    zone.classList.add('drag-over');
-});
-
-document.addEventListener('dragleave', e => {
-    const zone = e.target.closest('.duty-members');
-    if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
-});
-
-document.addEventListener('drop', e => {
-    const zone = e.target.closest('.duty-members');
-    if (!zone || !dragEl) return;
-    if (zone.dataset.type !== dragEl.dataset.type) return;
-    e.preventDefault();
-    zone.classList.remove('drag-over');
-
-    const srcKey  = dragEl.closest('.duty-members').dataset.key;
-    const destKey = zone.dataset.key;
-    if (srcKey === destKey) return; // 同じグループは何もしない
-
-    const srcZone = dragEl.closest('.duty-members');
-
-    // DOM移動（空プレースホルダーの前に挿入）
-    const placeholder = zone.querySelector('.duty-empty');
-    zone.insertBefore(dragEl, placeholder || null);
-
-    syncEmpty(srcZone);
-    syncEmpty(zone);
-    updateCount(dragEl.dataset.type, srcKey);
-    updateCount(dragEl.dataset.type, destKey);
-
-    // AJAX保存
-    const memberId = dragEl.dataset.memberId;
-    const type     = dragEl.dataset.type;
-    showStatus('保存中…', 'saving');
-
-    fetch('/duty.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            action:      'update_duty',
-            type:        type,
-            member_id:   memberId,
-            duty_key:    destKey,
-            csrf_token:  CSRF_TOKEN
-        })
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.ok) {
-            showStatus('保存しました', 'saved');
-        } else {
-            throw new Error(d.error || 'error');
+        function showStatus(msg, cls) {
+            clearTimeout(statusTimer);
+            statusEl.textContent = msg;
+            statusEl.className = cls;
+            if (cls === 'saved') {
+                statusTimer = setTimeout(() => {
+                    statusEl.textContent = '';
+                    statusEl.className = '';
+                }, 2000);
+            }
         }
-    })
-    .catch(() => {
-        showStatus('保存に失敗しました', 'error');
-    });
-});
-</script>
+
+        // ── カウント更新 ─────────────────────────────────────────
+        function updateCount(type, key) {
+            const zone = document.querySelector(`.duty-members[data-type="${type}"][data-key="${key}"]`);
+            const count = zone.querySelectorAll('.duty-member').length;
+            const cell = document.querySelector(`.duty-count[data-type="${type}"][data-key="${key}"]`);
+            cell.textContent = count > 0 ? count + '名' : '—';
+        }
+
+        // ── 空表示の制御 ─────────────────────────────────────────
+        function syncEmpty(zone) {
+            const placeholder = zone.querySelector('.duty-empty');
+            const hasMembers = zone.querySelectorAll('.duty-member').length > 0;
+            if (placeholder) {
+                placeholder.style.display = hasMembers ? 'none' : '';
+            } else if (!hasMembers) {
+                const span = document.createElement('span');
+                span.className = 'duty-empty';
+                span.textContent = '未設定';
+                zone.appendChild(span);
+            }
+        }
+
+        // ── AJAX保存共通処理 ─────────────────────────────────────
+        function saveDuty(memberId, type, destKey) {
+            showStatus('保存中…', 'saving');
+            fetch('/duty.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        action: 'update_duty',
+                        type: type,
+                        member_id: memberId,
+                        duty_key: destKey,
+                        csrf_token: CSRF_TOKEN
+                    })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok) {
+                        showStatus('保存しました', 'saved');
+                    } else {
+                        throw new Error(d.error || 'error');
+                    }
+                })
+                .catch(() => {
+                    showStatus('保存に失敗しました', 'error');
+                });
+        }
+
+        // ── ドロップ共通処理 ─────────────────────────────────────
+        function dropToZone(zone) {
+            if (!zone || !dragEl) return;
+            if (zone.dataset.type !== dragEl.dataset.type) return;
+            zone.classList.remove('drag-over');
+
+            const srcZone = dragEl.closest('.duty-members');
+            const srcKey = srcZone.dataset.key;
+            const destKey = zone.dataset.key;
+            if (srcKey === destKey) return;
+
+            const placeholder = zone.querySelector('.duty-empty');
+            zone.insertBefore(dragEl, placeholder || null);
+
+            syncEmpty(srcZone);
+            syncEmpty(zone);
+            updateCount(dragEl.dataset.type, srcKey);
+            updateCount(dragEl.dataset.type, destKey);
+            saveDuty(dragEl.dataset.memberId, dragEl.dataset.type, destKey);
+        }
+
+        // ── マウス ドラッグイベント ───────────────────────────────
+        document.addEventListener('dragstart', e => {
+            const el = e.target.closest('.duty-member');
+            if (!el) return;
+            dragEl = el;
+            el.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        document.addEventListener('dragend', e => {
+            if (dragEl) {
+                dragEl.classList.remove('dragging');
+                dragEl = null;
+            }
+            document.querySelectorAll('.duty-members.drag-over').forEach(z => z.classList.remove('drag-over'));
+        });
+
+        document.addEventListener('dragover', e => {
+            const zone = e.target.closest('.duty-members');
+            if (!zone || !dragEl) return;
+            if (zone.dataset.type !== dragEl.dataset.type) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            document.querySelectorAll('.duty-members.drag-over').forEach(z => z !== zone && z.classList.remove('drag-over'));
+            zone.classList.add('drag-over');
+        });
+
+        document.addEventListener('dragleave', e => {
+            const zone = e.target.closest('.duty-members');
+            if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+        });
+
+        document.addEventListener('drop', e => {
+            const zone = e.target.closest('.duty-members');
+            if (!zone || !dragEl) return;
+            e.preventDefault();
+            dropToZone(zone);
+        });
+
+        // ── タッチ ドラッグイベント（iPad / スマホ対応） ─────────
+        let touchClone = null;
+        let touchOffsetX = 0;
+        let touchOffsetY = 0;
+
+        document.addEventListener('touchstart', e => {
+            const el = e.target.closest('.duty-member');
+            if (!el) return;
+            dragEl = el;
+            el.classList.add('dragging');
+
+            const touch = e.touches[0];
+            const rect = el.getBoundingClientRect();
+            touchOffsetX = touch.clientX - rect.left;
+            touchOffsetY = touch.clientY - rect.top;
+
+            // 視覚的なクローンを作成
+            touchClone = el.cloneNode(true);
+            touchClone.style.cssText = `
+                position: fixed;
+                pointer-events: none;
+                z-index: 9999;
+                opacity: 0.8;
+                width: ${rect.width}px;
+                left: ${touch.clientX - touchOffsetX}px;
+                top:  ${touch.clientY - touchOffsetY}px;
+                margin: 0;
+            `;
+            document.body.appendChild(touchClone);
+        }, {
+            passive: true
+        });
+
+        document.addEventListener('touchmove', e => {
+            if (!dragEl || !touchClone) return;
+            e.preventDefault();
+
+            const touch = e.touches[0];
+            touchClone.style.left = (touch.clientX - touchOffsetX) + 'px';
+            touchClone.style.top = (touch.clientY - touchOffsetY) + 'px';
+
+            // クローンを一時非表示にして下の要素を取得
+            touchClone.style.display = 'none';
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            touchClone.style.display = '';
+
+            const zone = el ? el.closest('.duty-members') : null;
+            document.querySelectorAll('.duty-members.drag-over').forEach(z => z !== zone && z.classList.remove('drag-over'));
+            if (zone && zone.dataset.type === dragEl.dataset.type) {
+                zone.classList.add('drag-over');
+            }
+        }, {
+            passive: false
+        });
+
+        document.addEventListener('touchend', e => {
+            if (!dragEl) return;
+
+            const touch = e.changedTouches[0];
+            if (touchClone) {
+                touchClone.remove();
+                touchClone = null;
+            }
+
+            touchClone = null;
+
+            // ドロップ先を特定
+            dragEl.classList.remove('dragging');
+            const el = document.elementFromPoint(touch.clientX, touch.clientY);
+            const zone = el ? el.closest('.duty-members') : null;
+            document.querySelectorAll('.duty-members.drag-over').forEach(z => z.classList.remove('drag-over'));
+
+            if (zone) dropToZone(zone);
+            dragEl = null;
+        });
+    </script>
 </body>
+
 </html>
