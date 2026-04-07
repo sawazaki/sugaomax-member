@@ -148,6 +148,24 @@ function get_db()
     if (!in_array('has_sibling', $existing_members)) {
         $pdo->exec("ALTER TABLE members ADD COLUMN has_sibling INTEGER NOT NULL DEFAULT 0");
     }
+    if (!in_array('parent_name', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN parent_name TEXT");
+    }
+    if (!in_array('parent_relationship', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN parent_relationship TEXT");
+    }
+    if (!in_array('phone', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN phone TEXT");
+    }
+    if (!in_array('emergency_name', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN emergency_name TEXT");
+    }
+    if (!in_array('emergency_relationship', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN emergency_relationship TEXT");
+    }
+    if (!in_array('emergency_phone', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN emergency_phone TEXT");
+    }
     // name → last_name / first_name への分割マイグレーション
     if (in_array('name', $existing_members)) {
         if (!in_array('last_name', $existing_members)) {

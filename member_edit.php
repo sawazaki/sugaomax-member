@@ -18,10 +18,28 @@ if (!$m) {
     exit;
 }
 
-$msg   = '';
-$error = '';
+$msg          = '';
+$error        = '';
+$unlock_error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// ── 機密情報アンロック確認（30分有効） ───────────────────────
+$sensitive_unlocked = !empty($_SESSION['sensitive_unlocked_at'])
+    && (time() - $_SESSION['sensitive_unlocked_at']) < 180;
+
+// ── 機密情報アンロック処理 ────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unlock_sensitive') {
+    verify_csrf();
+    $pw = $_POST['password'] ?? '';
+    if (password_verify($pw, APP_PASSWORD_HASH)) {
+        $_SESSION['sensitive_unlocked_at'] = time();
+        header('Location: /member_edit.php?id=' . $id);
+        exit;
+    }
+    $unlock_error = 'パスワードが正しくありません。';
+}
+
+// ── 部員情報更新 ──────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== 'unlock_sensitive') {
     verify_csrf();
     $last_name       = trim($_POST['last_name'] ?? '');
     $first_name      = trim($_POST['first_name'] ?? '');
@@ -33,17 +51,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $height          = $_POST['height'] !== '' ? (int)$_POST['height'] : null;
     $reversible_bibs = $_POST['reversible_bibs'] !== '' ? (int)$_POST['reversible_bibs'] : 0;
     $blue_bibs       = $_POST['blue_bibs'] !== '' ? (int)$_POST['blue_bibs'] : 0;
-    $practice_duty   = in_array($_POST['practice_duty'] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $_POST['practice_duty'] : null;
-    $match_duty      = in_array($_POST['match_duty'] ?? '', ['1','2','3','4']) ? $_POST['match_duty'] : null;
-    $has_sibling     = !empty($_POST['has_sibling']) ? 1 : 0;
+    $practice_duty          = in_array($_POST['practice_duty'] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $_POST['practice_duty'] : null;
+    $match_duty             = in_array($_POST['match_duty'] ?? '', ['1','2','3','4']) ? $_POST['match_duty'] : null;
+    $has_sibling            = !empty($_POST['has_sibling']) ? 1 : 0;
 
     if ($last_name === '' || $grade < 1 || $grade > 6) {
         $error = '姓と学年は必須です。';
     } else {
-        $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=? WHERE id=?");
-        $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $id]);
+        if ($sensitive_unlocked) {
+            $parent_name            = trim($_POST['parent_name'] ?? '') ?: null;
+            $parent_relationship    = trim($_POST['parent_relationship'] ?? '') ?: null;
+            $phone                  = trim($_POST['phone'] ?? '') ?: null;
+            $emergency_name         = trim($_POST['emergency_name'] ?? '') ?: null;
+            $emergency_relationship = trim($_POST['emergency_relationship'] ?? '') ?: null;
+            $emergency_phone        = trim($_POST['emergency_phone'] ?? '') ?: null;
+            $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=?, parent_name=?, parent_relationship=?, phone=?, emergency_name=?, emergency_relationship=?, emergency_phone=? WHERE id=?");
+            $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $parent_name, $parent_relationship, $phone, $emergency_name, $emergency_relationship, $emergency_phone, $id]);
+        } else {
+            $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=? WHERE id=?");
+            $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $id]);
+        }
         $msg = '更新しました。';
-        // 最新データを再取得
         $stmt = $db->prepare("SELECT * FROM members WHERE id=?");
         $stmt->execute([$id]);
         $m = $stmt->fetch();
@@ -58,6 +86,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= h(member_name($m)) ?> - 部員編集 - 菅生マックス</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .sensitive-lock {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .sensitive-lock .lock-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .sensitive-lock p {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 14px;
+        }
+        .sensitive-lock .unlock-form {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .sensitive-lock .unlock-form input {
+            width: 200px;
+        }
+    </style>
 </head>
 
 <body>
@@ -162,11 +217,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         兄弟あり（当番表から除外）
                     </label>
                 </div>
+
                 <div class="flex gap-8 mt-8">
                     <button type="submit" class="btn btn-primary">更新する</button>
                     <a href="/members.php" class="btn btn-secondary">キャンセル</a>
                 </div>
             </form>
+
+            <!-- 保護者情報・緊急連絡先（パスワード保護） -->
+            <hr style="margin:24px 0;border:none;border-top:1px solid #e2e8f0;">
+
+            <?php if ($sensitive_unlocked): ?>
+                <?php
+                // アンロック残り時間（分）
+                $remaining = max(1, (int)ceil((180 - (time() - $_SESSION['sensitive_unlocked_at'])) / 60));
+                ?>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                    <span style="font-size:13px;color:#16a34a;font-weight:bold;">
+                        &#128275; 機密情報を表示中（あと約<?= $remaining ?>分）
+                    </span>
+                </div>
+                <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                    <div style="font-size:13px;font-weight:bold;color:#1e3a5f;margin-bottom:12px;">保護者情報</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>保護者氏名</label>
+                            <input type="text" name="parent_name" class="form-control"
+                                value="<?= h($m['parent_name'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>続柄</label>
+                            <input type="text" name="parent_relationship" class="form-control" placeholder="例: 父・母"
+                                value="<?= h($m['parent_relationship'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>携帯電話番号</label>
+                            <input type="tel" name="phone" class="form-control"
+                                value="<?= h($m['phone'] ?? '') ?>">
+                        </div>
+                    </div>
+
+                    <div style="font-size:13px;font-weight:bold;color:#1e3a5f;margin-bottom:12px;">緊急連絡先</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>氏名</label>
+                            <input type="text" name="emergency_name" class="form-control"
+                                value="<?= h($m['emergency_name'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>続柄</label>
+                            <input type="text" name="emergency_relationship" class="form-control"
+                                value="<?= h($m['emergency_relationship'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>携帯番号</label>
+                            <input type="tel" name="emergency_phone" class="form-control"
+                                value="<?= h($m['emergency_phone'] ?? '') ?>">
+                        </div>
+                    </div>
+                    <div class="flex gap-8 mt-8">
+                        <button type="submit" class="btn btn-primary">保護者情報を更新する</button>
+                    </div>
+                </form>
+
+            <?php else: ?>
+                <div class="sensitive-lock">
+                    <div class="lock-icon">&#128274;</div>
+                    <p>保護者情報・緊急連絡先を表示するには<br>管理者パスワードを入力してください。</p>
+                    <?php if ($unlock_error): ?>
+                        <p style="color:#dc2626;font-size:13px;margin-bottom:10px;"><?= h($unlock_error) ?></p>
+                    <?php endif; ?>
+                    <form method="post" class="unlock-form">
+                        <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                        <input type="hidden" name="action" value="unlock_sensitive">
+                        <input type="password" name="password" class="form-control" placeholder="パスワード" required autofocus>
+                        <button type="submit" class="btn btn-outline">確認</button>
+                    </form>
+                </div>
+            <?php endif; ?>
+
         </div>
     </div>
 </body>

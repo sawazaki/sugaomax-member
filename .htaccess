@@ -1,0 +1,2 @@
+# 検索エンジンインデックス拒否
+Header always set X-Robots-Tag "noindex, nofollow, noarchive"

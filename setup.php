@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $pw  = $_POST['password'] ?? '';
     $pw2 = $_POST['password2'] ?? '';
+    $epw = $_POST['enrollment_password'] ?? '';
 
     if (strlen($pw) < 8) {
         $error = 'パスワードは8文字以上で設定してください。';
@@ -55,6 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mkdir($data_dir, 0755, true);
         }
         $content = "<?php\n// このファイルはGitignore済みです。直接編集しないでください。\ndefine('APP_PASSWORD_HASH', " . var_export($hash, true) . ");\n";
+        if ($epw !== '') {
+            $ehash = password_hash($epw, PASSWORD_BCRYPT, ['cost' => 12]);
+            $content .= "define('ENROLLMENT_PASSWORD_HASH', " . var_export($ehash, true) . ");\n";
+        }
         if (file_put_contents($config_path, $content) !== false) {
             $success = true;
         } else {
@@ -97,6 +102,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-group">
                         <label for="password2">パスワード（確認）</label>
                         <input type="password" id="password2" name="password2" class="form-control" required minlength="8">
+                    </div>
+                    <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0;">
+                    <p style="font-size:12px;color:#94a3b8;margin-bottom:12px;">入部届けパスワード（任意）— 後から設定画面でも変更できます</p>
+                    <div class="form-group">
+                        <label for="enrollment_password">入部届けパスワード（8文字以上）</label>
+                        <input type="password" id="enrollment_password" name="enrollment_password" class="form-control" minlength="8">
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">設定する</button>
                 </form>

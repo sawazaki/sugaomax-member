@@ -16,7 +16,7 @@ $all_fields = [
     'practice_duty'   => '練習当番',
     'match_duty'      => '試合当番',
 ];
-$required_fields = ['grade', 'last_name'];
+$required_fields = ['grade', 'last_name', 'first_name'];
 
 // CSVダウンロード処理
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'export') {
