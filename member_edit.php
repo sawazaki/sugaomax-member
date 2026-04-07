@@ -38,44 +38,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unloc
     $unlock_error = 'パスワードが正しくありません。';
 }
 
-// ── 部員情報更新 ──────────────────────────────────────────────
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== 'unlock_sensitive') {
+// ── 部員基本情報更新 ─────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_member') {
     verify_csrf();
     $last_name       = trim($_POST['last_name'] ?? '');
     $first_name      = trim($_POST['first_name'] ?? '');
     $grade           = (int)($_POST['grade'] ?? 0);
     $gender          = in_array($_POST['gender'] ?? '', ['男子', '女子']) ? $_POST['gender'] : null;
     $romaji          = trim($_POST['romaji'] ?? '') ?: null;
-    $number          = $_POST['number'] !== '' ? (int)$_POST['number'] : null;
+    $number          = ($_POST['number'] ?? '') !== '' ? (int)$_POST['number'] : null;
     $school          = trim($_POST['school'] ?? '') ?: null;
-    $height          = $_POST['height'] !== '' ? (int)$_POST['height'] : null;
-    $reversible_bibs = $_POST['reversible_bibs'] !== '' ? (int)$_POST['reversible_bibs'] : 0;
-    $blue_bibs       = $_POST['blue_bibs'] !== '' ? (int)$_POST['blue_bibs'] : 0;
-    $practice_duty          = in_array($_POST['practice_duty'] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $_POST['practice_duty'] : null;
-    $match_duty             = in_array($_POST['match_duty'] ?? '', ['1','2','3','4']) ? $_POST['match_duty'] : null;
-    $has_sibling            = !empty($_POST['has_sibling']) ? 1 : 0;
+    $height          = ($_POST['height'] ?? '') !== '' ? (int)$_POST['height'] : null;
+    $reversible_bibs = ($_POST['reversible_bibs'] ?? '') !== '' ? (int)$_POST['reversible_bibs'] : 0;
+    $blue_bibs       = ($_POST['blue_bibs'] ?? '') !== '' ? (int)$_POST['blue_bibs'] : 0;
+    $practice_duty   = in_array($_POST['practice_duty'] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $_POST['practice_duty'] : null;
+    $match_duty      = in_array($_POST['match_duty'] ?? '', ['1','2','3','4']) ? $_POST['match_duty'] : null;
+    $has_sibling     = !empty($_POST['has_sibling']) ? 1 : 0;
 
     if ($last_name === '' || $grade < 1 || $grade > 6) {
         $error = '姓と学年は必須です。';
     } else {
-        if ($sensitive_unlocked) {
-            $parent_name            = trim($_POST['parent_name'] ?? '') ?: null;
-            $parent_relationship    = trim($_POST['parent_relationship'] ?? '') ?: null;
-            $phone                  = trim($_POST['phone'] ?? '') ?: null;
-            $emergency_name         = trim($_POST['emergency_name'] ?? '') ?: null;
-            $emergency_relationship = trim($_POST['emergency_relationship'] ?? '') ?: null;
-            $emergency_phone        = trim($_POST['emergency_phone'] ?? '') ?: null;
-            $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=?, parent_name=?, parent_relationship=?, phone=?, emergency_name=?, emergency_relationship=?, emergency_phone=? WHERE id=?");
-            $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $parent_name, $parent_relationship, $phone, $emergency_name, $emergency_relationship, $emergency_phone, $id]);
-        } else {
-            $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=? WHERE id=?");
-            $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $id]);
-        }
+        $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=? WHERE id=?");
+        $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $id]);
         $msg = '更新しました。';
         $stmt = $db->prepare("SELECT * FROM members WHERE id=?");
         $stmt->execute([$id]);
         $m = $stmt->fetch();
     }
+}
+
+// ── 保護者・緊急連絡先更新（アンロック済みのみ） ───────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_sensitive') {
+    verify_csrf();
+    if (!$sensitive_unlocked) {
+        header('Location: /member_edit.php?id=' . $id);
+        exit;
+    }
+    $parent_name            = trim($_POST['parent_name'] ?? '') ?: null;
+    $parent_relationship    = trim($_POST['parent_relationship'] ?? '') ?: null;
+    $phone                  = trim($_POST['phone'] ?? '') ?: null;
+    $emergency_name         = trim($_POST['emergency_name'] ?? '') ?: null;
+    $emergency_relationship = trim($_POST['emergency_relationship'] ?? '') ?: null;
+    $emergency_phone        = trim($_POST['emergency_phone'] ?? '') ?: null;
+    $stmt = $db->prepare("UPDATE members SET parent_name=?, parent_relationship=?, phone=?, emergency_name=?, emergency_relationship=?, emergency_phone=? WHERE id=?");
+    $stmt->execute([$parent_name, $parent_relationship, $phone, $emergency_name, $emergency_relationship, $emergency_phone, $id]);
+    $msg = '保護者情報を更新しました。';
+    $stmt = $db->prepare("SELECT * FROM members WHERE id=?");
+    $stmt->execute([$id]);
+    $m = $stmt->fetch();
 }
 ?>
 <!DOCTYPE html>
@@ -129,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== 'unloc
         <div class="card" style="max-width:640px">
             <form method="post">
                 <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                <input type="hidden" name="action" value="update_member">
                 <div class="form-row">
                     <div class="form-group">
                         <label>姓 <span style="color:red">*</span></label>
@@ -239,6 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') !== 'unloc
                 </div>
                 <form method="post">
                     <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                    <input type="hidden" name="action" value="update_sensitive">
                     <div style="font-size:13px;font-weight:bold;color:#1e3a5f;margin-bottom:12px;">保護者情報</div>
                     <div class="form-row">
                         <div class="form-group">

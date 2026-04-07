@@ -1,2 +1,1 @@
-# 検索エンジンインデックス拒否
-Header always set X-Robots-Tag "noindex, nofollow, noarchive"
+# （mod_headers 不要 - X-Robots-Tag は PHP側で出力）

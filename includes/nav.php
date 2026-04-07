@@ -9,7 +9,7 @@ $current = basename($_SERVER['PHP_SELF']);
         <li><a href="/matches.php" class="<?= in_array($current, ['matches.php', 'match_new.php', 'match_sheet.php']) ? 'active' : '' ?>">試合管理</a></li>
         <li><a href="/duty.php" class="<?= $current === 'duty.php' ? 'active' : '' ?>">当番</a></li>
         <li class="navbar-menu-spacer"></li>
-        <li><a href="/settings.php" class="<?= $current === 'settings.php' ? 'active' : '' ?>">設定</a></li>
+        <li><a href="/settings.php" class="<?= $current === 'settings.php' ? 'active' : '' ?>">入部</a></li>
         <li>
             <form method="post" action="/logout.php" class="navbar-logout-form">
                 <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">

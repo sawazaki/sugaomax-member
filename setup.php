@@ -7,6 +7,7 @@ session_set_cookie_params([
     'samesite' => 'Lax',
 ]);
 session_start();
+header('X-Robots-Tag: noindex, nofollow, noarchive');
 
 $config_path = __DIR__ . '/data/config.php';
 

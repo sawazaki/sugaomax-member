@@ -9,6 +9,9 @@ session_set_cookie_params([
 ]);
 session_start();
 
+// 検索エンジンインデックス拒否
+header('X-Robots-Tag: noindex, nofollow, noarchive');
+
 // パスワード設定ファイル（data/ はGitignore済み）
 $_config_path = __DIR__ . '/../data/config.php';
 if (file_exists($_config_path)) {
