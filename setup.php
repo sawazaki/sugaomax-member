@@ -50,6 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'パスワードは8文字以上で設定してください。';
     } elseif ($pw !== $pw2) {
         $error = 'パスワードが一致しません。';
+    } elseif ($epw !== '' && strlen($epw) < 8) {
+        $error = '入部届けパスワードは8文字以上で設定してください。';
     } else {
         $hash = password_hash($pw, PASSWORD_BCRYPT, ['cost' => 12]);
         $data_dir = __DIR__ . '/data';
