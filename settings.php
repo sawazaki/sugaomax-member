@@ -242,7 +242,6 @@ $qr_url = ($token_set && $enrollment_active)
                     </p>
                     <div id="qr-canvas"></div>
                     <div class="qr-url-box"><?= h($qr_url) ?></div>
-                    <button onclick="window.print()" class="btn btn-outline btn-sm" style="margin-top:12px;">印刷する</button>
                 </div>
             <?php elseif ($token_set): ?>
                 <div class="card" style="flex:0 0 220px;text-align:center;">

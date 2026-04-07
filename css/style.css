@@ -53,6 +53,9 @@ a:hover { text-decoration: underline; }
     border: none;
     cursor: pointer;
 }
+.navbar-link {
+    background-color: #991b1b;
+}
 
 .navbar-menu a:hover,
 .navbar-menu a.active,
@@ -80,6 +83,10 @@ a:hover { text-decoration: underline; }
 
 .navbar-logout-form {
     margin: 0;
+}
+
+.navbar-toggle {
+    display: none;
 }
 
 /* ===== Layout ===== */
@@ -409,20 +416,75 @@ select.form-control { background: #fff; }
 
 /* ===== Responsive (スマートフォン: 640px以下) ===== */
 @media (max-width: 640px) {
-    /* Navbar */
+    /* Navbar ハンバーガー */
     .navbar {
-        height: auto;
-        min-height: 48px;
-        padding: 6px 12px;
-        flex-wrap: wrap;
-        gap: 2px;
+        height: 52px;
+        padding: 0 16px;
+        flex-wrap: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 200;
     }
     .navbar-brand { margin-right: 0; flex: 1; }
-    .navbar-menu { width: 100%; flex-wrap: wrap; gap: 2px; }
-    .navbar-menu li { flex: 0 0 auto; }
+
+    .navbar-toggle {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        width: 40px;
+        height: 40px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        flex-shrink: 0;
+    }
+    .navbar-toggle span {
+        display: block;
+        width: 22px;
+        height: 2px;
+        background: #fff;
+        border-radius: 2px;
+        transition: transform .2s, opacity .2s;
+        transform-origin: center;
+    }
+    /* ✕ アニメーション */
+    .navbar-toggle.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .navbar-toggle.open span:nth-child(2) { opacity: 0; }
+    .navbar-toggle.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .navbar-menu {
+        display: flex;
+        position: absolute;
+        top: 52px;
+        left: 0;
+        right: 0;
+        background: #000;
+        flex-direction: column;
+        gap: 0;
+        padding: 8px 0 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        z-index: 199;
+        /* 初期状態：非表示 */
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(-6px);
+        transition: opacity .2s ease, transform .2s ease, visibility .2s;
+    }
+    .navbar-menu.open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateY(0);
+        padding: 1rem;
+    }
+    .navbar-menu li { width: 100%; }
     .navbar-menu a,
-    .navbar-link { padding: 5px 10px; font-size: 12px; }
-    .navbar-menu-spacer { margin-left: 0; }
+    .navbar-link { padding: 12px 20px; font-size: 14px; border-radius: 0; width: 100%; text-align: left; }
+    .navbar-menu-spacer { display: none; }
 
     /* Container */
     .container { padding: 12px 10px; }
