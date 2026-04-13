@@ -4,9 +4,60 @@ require_login();
 
 $db = get_db();
 
+// ── DBマイグレーション: 並び順カラム追加 ─────────────────────
+$cols = array_column($db->query("PRAGMA table_info(members)")->fetchAll(), 'name');
+if (!in_array('practice_duty_order', $cols)) {
+    $db->exec("ALTER TABLE members ADD COLUMN practice_duty_order INTEGER NOT NULL DEFAULT 0");
+    $rows = $db->query("SELECT id, practice_duty FROM members WHERE active=1 AND practice_duty IS NOT NULL AND practice_duty != '' ORDER BY practice_duty, grade DESC, last_name, first_name")->fetchAll();
+    $pos = [];
+    $stmt = $db->prepare("UPDATE members SET practice_duty_order=? WHERE id=?");
+    foreach ($rows as $r) {
+        $k = $r['practice_duty'];
+        if (!isset($pos[$k])) $pos[$k] = 1;
+        $stmt->execute([$pos[$k]++, $r['id']]);
+    }
+}
+if (!in_array('match_duty_order', $cols)) {
+    $db->exec("ALTER TABLE members ADD COLUMN match_duty_order INTEGER NOT NULL DEFAULT 0");
+    $rows = $db->query("SELECT id, match_duty FROM members WHERE active=1 AND match_duty IS NOT NULL AND match_duty != '' ORDER BY match_duty, grade DESC, last_name, first_name")->fetchAll();
+    $pos = [];
+    $stmt = $db->prepare("UPDATE members SET match_duty_order=? WHERE id=?");
+    foreach ($rows as $r) {
+        $k = $r['match_duty'];
+        if (!isset($pos[$k])) $pos[$k] = 1;
+        $stmt->execute([$pos[$k]++, $r['id']]);
+    }
+}
+
+// ── AJAX: 並び順更新 ──────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reorder_duty') {
+    verify_csrf();
+    if (!is_editor()) { http_response_code(403); echo json_encode(['error' => 'forbidden']); exit; }
+    header('Content-Type: application/json');
+    $type = $_POST['type'] ?? '';
+    $ids  = json_decode($_POST['ids'] ?? '[]', true);
+    if ($type === 'practice') {
+        $col = 'practice_duty_order';
+    } elseif ($type === 'match') {
+        $col = 'match_duty_order';
+    } else {
+        http_response_code(400); echo json_encode(['error' => 'invalid type']); exit;
+    }
+    if (!is_array($ids) || empty($ids)) {
+        http_response_code(400); echo json_encode(['error' => 'invalid ids']); exit;
+    }
+    $stmt = $db->prepare("UPDATE members SET {$col}=? WHERE id=? AND active=1");
+    foreach ($ids as $i => $id) {
+        $stmt->execute([$i + 1, (int)$id]);
+    }
+    echo json_encode(['ok' => true]);
+    exit;
+}
+
 // ── AJAX: 当番更新 ────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_duty') {
     verify_csrf();
+    if (!is_editor()) { http_response_code(403); echo json_encode(['error' => 'forbidden']); exit; }
     header('Content-Type: application/json');
 
     $type      = $_POST['type']      ?? '';
@@ -14,11 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $duty_key  = $_POST['duty_key']  ?? '';
 
     if ($type === 'practice') {
-        $valid_keys = array_merge([''], range('A', 'K'));
+        $valid_keys = array_merge([''], range('A', 'J'));
         $col = 'practice_duty';
+        $order_col = 'practice_duty_order';
     } elseif ($type === 'match') {
         $valid_keys = ['', '1', '2', '3', '4'];
         $col = 'match_duty';
+        $order_col = 'match_duty_order';
     } else {
         http_response_code(400);
         echo json_encode(['error' => 'invalid type']);
@@ -32,17 +85,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     }
 
     $val = $duty_key === '' ? null : $duty_key;
-    $db->prepare("UPDATE members SET {$col}=? WHERE id=? AND active=1")->execute([$val, $member_id]);
+    // グループ変更時は順序を999（末尾）にセット
+    $db->prepare("UPDATE members SET {$col}=?, {$order_col}=999 WHERE id=? AND active=1")->execute([$val, $member_id]);
     echo json_encode(['ok' => true]);
     exit;
 }
 
 // ── 表示データ取得 ────────────────────────────────────────
 $practice_groups = [];
-foreach (range('A', 'K') as $key) {
+foreach (range('A', 'J') as $key) {
     $practice_groups[$key] = [];
 }
-foreach ($db->query("SELECT * FROM members WHERE active=1 AND practice_duty IS NOT NULL AND practice_duty != '' AND has_sibling = 0 ORDER BY grade DESC, last_name, first_name")->fetchAll() as $m) {
+foreach ($db->query("SELECT * FROM members WHERE active=1 AND practice_duty IS NOT NULL AND practice_duty != '' AND has_sibling = 0 ORDER BY practice_duty, practice_duty_order ASC")->fetchAll() as $m) {
     if (isset($practice_groups[$m['practice_duty']])) $practice_groups[$m['practice_duty']][] = $m;
 }
 
@@ -50,7 +104,7 @@ $match_groups = [];
 foreach (['1', '2', '3', '4'] as $key) {
     $match_groups[$key] = [];
 }
-foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT NULL AND match_duty != '' AND has_sibling = 0 ORDER BY grade DESC, last_name, first_name")->fetchAll() as $m) {
+foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT NULL AND match_duty != '' AND has_sibling = 0 ORDER BY match_duty, match_duty_order ASC")->fetchAll() as $m) {
     if (isset($match_groups[$m['match_duty']])) $match_groups[$m['match_duty']][] = $m;
 }
 ?>
@@ -319,8 +373,27 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
                 });
         }
 
+        // ── 並び順保存 ──────────────────────────────────────────
+        function saveOrder(type, zone) {
+            const ids = Array.from(zone.querySelectorAll('.duty-member')).map(el => el.dataset.memberId);
+            if (ids.length === 0) return;
+            fetch('/duty.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    action: 'reorder_duty',
+                    type: type,
+                    ids: JSON.stringify(ids),
+                    csrf_token: CSRF_TOKEN
+                })
+            }).then(r => r.json()).then(d => {
+                if (d.ok) showStatus('保存しました', 'saved');
+                else throw new Error(d.error);
+            }).catch(() => showStatus('保存に失敗しました', 'error'));
+        }
+
         // ── ドロップ共通処理 ─────────────────────────────────────
-        function dropToZone(zone) {
+        function dropToZone(zone, beforeEl) {
             if (!zone || !dragEl) return;
             if (zone.dataset.type !== dragEl.dataset.type) return;
             zone.classList.remove('drag-over');
@@ -328,16 +401,27 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
             const srcZone = dragEl.closest('.duty-members');
             const srcKey = srcZone.dataset.key;
             const destKey = zone.dataset.key;
-            if (srcKey === destKey) return;
 
-            const placeholder = zone.querySelector('.duty-empty');
-            zone.insertBefore(dragEl, placeholder || null);
+            if (srcKey === destKey) {
+                // 同一ゾーン: dragover で既に移動済み → 順序保存のみ
+                saveOrder(dragEl.dataset.type, zone);
+                return;
+            }
+
+            // 別ゾーンへ移動
+            if (beforeEl) {
+                zone.insertBefore(dragEl, beforeEl);
+            } else {
+                const placeholder = zone.querySelector('.duty-empty');
+                zone.insertBefore(dragEl, placeholder || null);
+            }
 
             syncEmpty(srcZone);
             syncEmpty(zone);
             updateCount(dragEl.dataset.type, srcKey);
             updateCount(dragEl.dataset.type, destKey);
             saveDuty(dragEl.dataset.memberId, dragEl.dataset.type, destKey);
+            saveOrder(dragEl.dataset.type, zone);
         }
 
         // ── マウス ドラッグイベント ───────────────────────────────
@@ -358,13 +442,25 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
         });
 
         document.addEventListener('dragover', e => {
-            const zone = e.target.closest('.duty-members');
-            if (!zone || !dragEl) return;
-            if (zone.dataset.type !== dragEl.dataset.type) return;
+            if (!dragEl) return;
+            const memberEl = e.target.closest('.duty-member');
+            const zone     = e.target.closest('.duty-members');
+            const targetZone = memberEl ? memberEl.closest('.duty-members') : zone;
+            if (!targetZone || targetZone.dataset.type !== dragEl.dataset.type) return;
+
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            document.querySelectorAll('.duty-members.drag-over').forEach(z => z !== zone && z.classList.remove('drag-over'));
-            zone.classList.add('drag-over');
+
+            // 同一ゾーン内でメンバーの上にホバーしたらリアルタイムで並び替え
+            if (memberEl && memberEl !== dragEl) {
+                const srcZone = dragEl.closest('.duty-members');
+                if (srcZone === targetZone) {
+                    targetZone.insertBefore(dragEl, memberEl);
+                }
+            }
+
+            document.querySelectorAll('.duty-members.drag-over').forEach(z => z !== targetZone && z.classList.remove('drag-over'));
+            targetZone.classList.add('drag-over');
         });
 
         document.addEventListener('dragleave', e => {
@@ -373,10 +469,26 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
         });
 
         document.addEventListener('drop', e => {
-            const zone = e.target.closest('.duty-members');
-            if (!zone || !dragEl) return;
+            if (!dragEl) return;
             e.preventDefault();
-            dropToZone(zone);
+            const memberEl = e.target.closest('.duty-member');
+            const zone     = e.target.closest('.duty-members');
+            const targetZone = memberEl ? memberEl.closest('.duty-members') : zone;
+            if (!targetZone) return;
+
+            if (memberEl && memberEl !== dragEl) {
+                const srcZone = dragEl.closest('.duty-members');
+                if (srcZone === targetZone) {
+                    // 同一ゾーン: dragover で移動済み → 保存
+                    targetZone.classList.remove('drag-over');
+                    saveOrder(dragEl.dataset.type, targetZone);
+                    return;
+                }
+                // 別ゾーンのメンバーの上にドロップ
+                dropToZone(targetZone, memberEl);
+            } else {
+                dropToZone(targetZone, null);
+            }
         });
 
         // ── タッチ ドラッグイベント（iPad / スマホ対応） ─────────
@@ -438,20 +550,32 @@ foreach ($db->query("SELECT * FROM members WHERE active=1 AND match_duty IS NOT 
             if (!dragEl) return;
 
             const touch = e.changedTouches[0];
-            if (touchClone) {
-                touchClone.remove();
-                touchClone = null;
-            }
+            if (touchClone) { touchClone.remove(); touchClone = null; }
 
-            touchClone = null;
-
-            // ドロップ先を特定
             dragEl.classList.remove('dragging');
-            const el = document.elementFromPoint(touch.clientX, touch.clientY);
-            const zone = el ? el.closest('.duty-members') : null;
             document.querySelectorAll('.duty-members.drag-over').forEach(z => z.classList.remove('drag-over'));
 
-            if (zone) dropToZone(zone);
+            const el       = document.elementFromPoint(touch.clientX, touch.clientY);
+            const memberEl = el ? el.closest('.duty-member') : null;
+            const zone     = el ? el.closest('.duty-members') : null;
+
+            if (memberEl && memberEl !== dragEl) {
+                const targetZone = memberEl.closest('.duty-members');
+                const srcZone    = dragEl.closest('.duty-members');
+                if (targetZone && targetZone.dataset.type === dragEl.dataset.type) {
+                    if (srcZone === targetZone) {
+                        // 同一ゾーン: 指定メンバーの前に挿入して保存
+                        targetZone.insertBefore(dragEl, memberEl);
+                        saveOrder(dragEl.dataset.type, targetZone);
+                    } else {
+                        // 別ゾーンのメンバー上にドロップ
+                        dropToZone(targetZone, memberEl);
+                    }
+                }
+            } else if (zone) {
+                dropToZone(zone, null);
+            }
+
             dragEl = null;
         });
     </script>

@@ -28,6 +28,7 @@ if (!$match) {
 // 保存（member[] は送信順 = 表示順）
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+    if (!is_editor()) { http_response_code(403); exit('forbidden'); }
     $db->prepare("DELETE FROM match_members WHERE match_id=?")->execute([$id]);
     $selected  = $_POST['member'] ?? [];
     $positions = $_POST['position'] ?? [];

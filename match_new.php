@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/db.php';
-require_login();
+require_editor();
 
 $db = get_db();
 $error = '';

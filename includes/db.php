@@ -22,10 +22,45 @@ if (file_exists($_config_path)) {
 }
 unset($_config_path);
 
-function require_login()
+function require_login(): void
 {
     if (empty($_SESSION['logged_in'])) {
         header('Location: /login.php');
+        exit;
+    }
+}
+
+function is_admin(): bool
+{
+    return ($_SESSION['role'] ?? '') === 'admin';
+}
+
+function is_editor(): bool
+{
+    return in_array($_SESSION['role'] ?? '', ['admin', 'editor'], true);
+}
+
+function is_viewer(): bool
+{
+    return ($_SESSION['role'] ?? '') === 'viewer';
+}
+
+function require_editor(): void
+{
+    require_login();
+    if (!is_editor()) {
+        http_response_code(403);
+        include __DIR__ . '/forbidden.php';
+        exit;
+    }
+}
+
+function require_admin(): void
+{
+    require_login();
+    if (!is_admin()) {
+        http_response_code(403);
+        include __DIR__ . '/forbidden.php';
         exit;
     }
 }

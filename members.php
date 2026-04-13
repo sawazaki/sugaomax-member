@@ -8,6 +8,7 @@ $msg = '';
 // 削除（論理削除）
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     verify_csrf();
+    if (!is_editor()) { http_response_code(403); exit('forbidden'); }
     $id = (int)$_POST['id'];
     $db->prepare("UPDATE members SET active=0 WHERE id=?")->execute([$id]);
     $msg = '部員を削除しました。';

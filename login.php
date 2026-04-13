@@ -11,9 +11,22 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $password = $_POST['password'] ?? '';
-    if (defined('APP_PASSWORD_HASH') && password_verify($password, APP_PASSWORD_HASH)) {
+    if (defined('ADMIN_PASSWORD_HASH') && ADMIN_PASSWORD_HASH !== '' && password_verify($password, ADMIN_PASSWORD_HASH)) {
         session_regenerate_id(true);
         $_SESSION['logged_in'] = true;
+        $_SESSION['role'] = 'admin';
+        header('Location: /index.php');
+        exit;
+    } elseif (defined('APP_PASSWORD_HASH') && APP_PASSWORD_HASH !== '' && password_verify($password, APP_PASSWORD_HASH)) {
+        session_regenerate_id(true);
+        $_SESSION['logged_in'] = true;
+        $_SESSION['role'] = 'editor';
+        header('Location: /index.php');
+        exit;
+    } elseif (defined('VIEWER_PASSWORD_HASH') && VIEWER_PASSWORD_HASH !== '' && password_verify($password, VIEWER_PASSWORD_HASH)) {
+        session_regenerate_id(true);
+        $_SESSION['logged_in'] = true;
+        $_SESSION['role'] = 'viewer';
         header('Location: /index.php');
         exit;
     } else {

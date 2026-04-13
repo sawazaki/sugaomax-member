@@ -8,6 +8,7 @@ $msg = '';
 // 削除
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     verify_csrf();
+    if (!is_editor()) { http_response_code(403); exit('forbidden'); }
     $id = (int)$_POST['id'];
     $db->prepare("DELETE FROM match_members WHERE match_id=?")->execute([$id]);
     $db->prepare("DELETE FROM matches WHERE id=?")->execute([$id]);
