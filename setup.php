@@ -1,5 +1,13 @@
 <?php
-define('DB_PATH', __DIR__ . '/data/minibasket.db');
+// data/ ディレクトリのパスを自動検出（db.php と同じロジック）
+$_p = dirname(__DIR__);
+define('DATA_DIR',
+    basename($_p) === 'public_html'
+        ? dirname($_p) . '/data'   // Xserver: sugaomax.com/data/
+        : __DIR__ . '/data'        // 開発環境: /var/www/html/data/
+);
+unset($_p);
+define('DB_PATH', DATA_DIR . '/minibasket.db');
 $session_secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_set_cookie_params([
     'httponly' => true,
@@ -9,7 +17,7 @@ session_set_cookie_params([
 session_start();
 header('X-Robots-Tag: noindex, nofollow, noarchive');
 
-$config_path = __DIR__ . '/data/config.php';
+$config_path = DATA_DIR . '/config.php';
 
 // すでに設定済みならトップへ
 if (file_exists($config_path)) {
@@ -54,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = '入部届けパスワードは8文字以上で設定してください。';
     } else {
         $hash = password_hash($pw, PASSWORD_BCRYPT, ['cost' => 12]);
-        $data_dir = __DIR__ . '/data';
+        $data_dir = DATA_DIR;
         if (!is_dir($data_dir)) {
             mkdir($data_dir, 0755, true);
         }

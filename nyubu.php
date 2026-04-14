@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/db.php';
 require_login();
 
-$config_path = __DIR__ . '/data/config.php';
+$config_path = DATA_DIR . '/config.php';
 $msg   = '';
 $error = '';
 

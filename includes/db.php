@@ -1,5 +1,16 @@
 <?php
-define('DB_PATH', __DIR__ . '/../data/minibasket.db');
+// data/ ディレクトリのパスを自動検出
+// Xserver: includes/ の2つ上が public_html → その上の data/ を使用
+// 開発環境: includes/ の1つ上（ドキュメントルート）内の data/ を使用
+$_dr = dirname(__DIR__);
+$_p  = dirname($_dr);
+define('DATA_DIR',
+    basename($_p) === 'public_html'
+        ? dirname($_p) . '/data'   // Xserver: sugaomax.com/data/
+        : $_dr . '/data'           // 開発環境: /var/www/html/data/
+);
+unset($_dr, $_p);
+define('DB_PATH', DATA_DIR . '/minibasket.db');
 
 $session_secure = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_set_cookie_params([
@@ -13,7 +24,7 @@ session_start();
 header('X-Robots-Tag: noindex, nofollow, noarchive');
 
 // パスワード設定ファイル（data/ はGitignore済み）
-$_config_path = __DIR__ . '/../data/config.php';
+$_config_path = DATA_DIR . '/config.php';
 if (file_exists($_config_path)) {
     require_once $_config_path;
 } elseif (basename($_SERVER['SCRIPT_FILENAME']) !== 'setup.php') {
@@ -203,6 +214,9 @@ function get_db()
     }
     if (!in_array('emergency_phone', $existing_members)) {
         $pdo->exec("ALTER TABLE members ADD COLUMN emergency_phone TEXT");
+    }
+    if (!in_array('enrollment_date', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN enrollment_date TEXT");
     }
     // name → last_name / first_name への分割マイグレーション
     if (in_array('name', $existing_members)) {

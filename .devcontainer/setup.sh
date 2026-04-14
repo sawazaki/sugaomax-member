@@ -11,4 +11,9 @@ npm install -g @anthropic-ai/claude-code
 echo "==> data/ ディレクトリの権限設定"
 chown -R www-data:www-data /var/www/html/data 2>/dev/null || true
 
+echo "==> Apache をポート 53570 に設定"
+sed -i 's/Listen 80$/Listen 53570/' /etc/apache2/ports.conf
+sed -i 's/<VirtualHost \*:80>/<VirtualHost *:53570>/' /etc/apache2/sites-enabled/000-default.conf
+service apache2 start
+
 echo "==> 完了"

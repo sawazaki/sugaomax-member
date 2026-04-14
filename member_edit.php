@@ -30,7 +30,10 @@ $sensitive_unlocked = !empty($_SESSION['sensitive_unlocked_at'])
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'unlock_sensitive') {
     verify_csrf();
     $pw = $_POST['password'] ?? '';
-    if (password_verify($pw, APP_PASSWORD_HASH)) {
+    if (
+        password_verify($pw, APP_PASSWORD_HASH)
+        || (defined('ADMIN_PASSWORD_HASH') && ADMIN_PASSWORD_HASH !== '' && password_verify($pw, ADMIN_PASSWORD_HASH))
+    ) {
         $_SESSION['sensitive_unlocked_at'] = time();
         header('Location: /member_edit.php?id=' . $id);
         exit;
@@ -51,15 +54,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $height          = ($_POST['height'] ?? '') !== '' ? (int)$_POST['height'] : null;
     $reversible_bibs = ($_POST['reversible_bibs'] ?? '') !== '' ? (int)$_POST['reversible_bibs'] : 0;
     $blue_bibs       = ($_POST['blue_bibs'] ?? '') !== '' ? (int)$_POST['blue_bibs'] : 0;
-    $practice_duty   = in_array($_POST['practice_duty'] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $_POST['practice_duty'] : null;
-    $match_duty      = in_array($_POST['match_duty'] ?? '', ['1','2','3','4']) ? $_POST['match_duty'] : null;
+    $practice_duty   = in_array($_POST['practice_duty'] ?? '', ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']) ? $_POST['practice_duty'] : null;
+    $match_duty      = in_array($_POST['match_duty'] ?? '', ['1', '2', '3', '4']) ? $_POST['match_duty'] : null;
     $has_sibling     = !empty($_POST['has_sibling']) ? 1 : 0;
+    $enrollment_date_raw = trim($_POST['enrollment_date'] ?? '');
+    $d = $enrollment_date_raw !== '' ? DateTime::createFromFormat('Y-m-d', $enrollment_date_raw) : false;
+    $enrollment_date = ($d && $d->format('Y-m-d') === $enrollment_date_raw) ? $enrollment_date_raw : null;
 
     if ($last_name === '' || $grade < 1 || $grade > 6) {
         $error = '姓と学年は必須です。';
     } else {
-        $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=? WHERE id=?");
-        $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $id]);
+        $stmt = $db->prepare("UPDATE members SET last_name=?, first_name=?, grade=?, gender=?, romaji=?, number=?, school=?, height=?, reversible_bibs=?, blue_bibs=?, practice_duty=?, match_duty=?, has_sibling=?, enrollment_date=? WHERE id=?");
+        $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $enrollment_date, $id]);
         $msg = '更新しました。';
         $stmt = $db->prepare("SELECT * FROM members WHERE id=?");
         $stmt->execute([$id]);
@@ -104,21 +110,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
             padding: 20px;
             text-align: center;
         }
+
         .sensitive-lock .lock-icon {
             font-size: 28px;
             margin-bottom: 8px;
         }
+
         .sensitive-lock p {
             font-size: 13px;
             color: #64748b;
             margin-bottom: 14px;
         }
+
         .sensitive-lock .unlock-form {
             display: flex;
             gap: 8px;
             justify-content: center;
             flex-wrap: wrap;
         }
+
         .sensitive-lock .unlock-form input {
             width: 200px;
         }
@@ -204,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                         <label>試合当番</label>
                         <select name="match_duty" class="form-control">
                             <option value="">未設定</option>
-                            <?php foreach (['1','2','3','4'] as $v): ?>
+                            <?php foreach (['1', '2', '3', '4'] as $v): ?>
                                 <option value="<?= $v ?>" <?= ($m['match_duty'] ?? '') === $v ? 'selected' : '' ?>><?= $v ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -220,6 +230,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                         <label>青ビブス番号</label>
                         <input type="number" name="blue_bibs" class="form-control" min="0" max="99"
                             value="<?= h(($m['blue_bibs'] ?? 0) ?: '') ?>">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>入部日</label>
+                        <input type="date" name="enrollment_date" class="form-control"
+                            value="<?= h($m['enrollment_date'] ?? '') ?>">
                     </div>
                 </div>
                 <div style="margin-bottom:16px;">
@@ -296,7 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
             <?php else: ?>
                 <div class="sensitive-lock">
                     <div class="lock-icon">&#128274;</div>
-                    <p>保護者情報・緊急連絡先を表示するには<br>管理者パスワードを入力してください。</p>
+                    <p>保護者情報・緊急連絡先を表示するには<br>パスワードを入力してください。</p>
                     <?php if ($unlock_error): ?>
                         <p style="color:#dc2626;font-size:13px;margin-bottom:10px;"><?= h($unlock_error) ?></p>
                     <?php endif; ?>

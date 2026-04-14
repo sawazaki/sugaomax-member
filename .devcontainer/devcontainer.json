@@ -6,10 +6,9 @@
 
   "workspaceMount": "source=${localWorkspaceFolder},target=/var/www/html,type=bind",
   "workspaceFolder": "/var/www/html",
-
-  "forwardPorts": [8081],
+  "forwardPorts": [53570],
   "portsAttributes": {
-    "8081": {
+    "53570": {
       "label": "Apache (minibasket)",
       "onAutoForward": "notify"
     }

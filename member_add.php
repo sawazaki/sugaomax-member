@@ -20,12 +20,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $practice_duty   = in_array($_POST['practice_duty'] ?? '', ['A','B','C','D','E','F','G','H','I','J','K']) ? $_POST['practice_duty'] : null;
     $match_duty      = in_array($_POST['match_duty'] ?? '', ['1','2','3','4']) ? $_POST['match_duty'] : null;
     $has_sibling     = !empty($_POST['has_sibling']) ? 1 : 0;
+    $enrollment_date_raw = trim($_POST['enrollment_date'] ?? '');
+    $d = $enrollment_date_raw !== '' ? DateTime::createFromFormat('Y-m-d', $enrollment_date_raw) : false;
+    $enrollment_date = ($d && $d->format('Y-m-d') === $enrollment_date_raw) ? $enrollment_date_raw : null;
 
     if ($last_name === '' || $grade < 1 || $grade > 6) {
         $error = '姓と学年は必須です。';
     } else {
-        $stmt = $db->prepare("INSERT INTO members (last_name, first_name, grade, gender, romaji, number, school, height, reversible_bibs, blue_bibs, practice_duty, match_duty, has_sibling) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling]);
+        $stmt = $db->prepare("INSERT INTO members (last_name, first_name, grade, gender, romaji, number, school, height, reversible_bibs, blue_bibs, practice_duty, match_duty, has_sibling, enrollment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$last_name, $first_name, $grade, $gender, $romaji, $number, $school, $height, $reversible_bibs, $blue_bibs, $practice_duty, $match_duty, $has_sibling, $enrollment_date]);
         header('Location: /members.php?added=1');
         exit;
     }
@@ -135,6 +138,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label>青ビブス番号</label>
                         <input type="number" name="blue_bibs" class="form-control" min="0" max="99"
                             value="<?= h($_POST['blue_bibs'] ?? '') ?>">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>入部日</label>
+                        <input type="date" name="enrollment_date" class="form-control"
+                            value="<?= h($_POST['enrollment_date'] ?? '') ?>">
                     </div>
                 </div>
                 <div style="margin-bottom:16px;">

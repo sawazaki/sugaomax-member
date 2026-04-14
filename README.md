@@ -6,9 +6,10 @@
 
 ### 部員管理
 - 部員の登録・編集・削除（論理削除）
-- 氏名・学年・背番号・性別・所属校・身長を管理
-- リバーシブルビブス・青ビブスの所持数管理
-- 性別 / 所属校 / 学年でのタブフィルター＆列ソート
+- 氏名・学年・背番号・性別・所属校・身長・入部日を管理
+- リバーシブルビブス・青ビブスの番号管理
+- 保護者情報・緊急連絡先をパスワード保護で管理
+- 性別 / 所属校でのタブフィルター＆列ソート
 - CSV インポート / エクスポート
 
 ### 試合管理
@@ -20,6 +21,16 @@
 - ドラッグ＆ドロップで並び順を変更
 - 公式フォーマット（20名・4枚複写）での印刷出力に対応
 
+### 当番管理
+- 練習当番（A〜J）・試合当番（1〜4）のグループ管理
+- ドラッグ＆ドロップで部員をグループ間移動（マウス・タッチ対応）
+- 未割り当て部員の一覧表示
+- グループ別 Excel（.xlsx）エクスポート
+
+### 入部届け
+- 保護者向け公開フォーム（ログイン不要・専用パスワードまたはQRコードで認証）
+- 入部届け受付状態の切替・QRコードの発行
+
 ## 技術スタック
 
 | 項目 | 内容 |
@@ -27,7 +38,7 @@
 | サーバーサイド | PHP 8.2 + Apache |
 | データベース | SQLite3（`data/minibasket.db`） |
 | フロントエンド | HTML / CSS / Vanilla JavaScript |
-| 認証 | セッションベース（パスワード認証） |
+| 認証 | セッションベース ロール別パスワード認証（admin / editor / viewer） |
 
 ## ファイル構成
 
@@ -36,37 +47,46 @@
 ├── index.php            # ダッシュボード
 ├── login.php            # ログイン
 ├── logout.php           # ログアウト
+├── setup.php            # 初回セットアップ
+├── settings.php         # パスワード設定（管理者のみ）
 ├── members.php          # 部員一覧
 ├── member_add.php       # 部員追加
 ├── member_edit.php      # 部員編集
-├── members_export.php   # CSV エクスポート
-├── members_import.php   # CSV インポート
+├── members_export.php   # 部員 CSV エクスポート
+├── members_import.php   # 部員 CSV インポート
 ├── matches.php          # 試合一覧
 ├── match_new.php        # 試合登録・編集
 ├── match_sheet.php      # メンバー表作成・印刷
+├── duty.php             # 当番管理
+├── nyubu.php            # 入部届け管理（受付状態・QRコード）
+├── enrollment.php       # 入部届けフォーム（保護者向け公開ページ）
 ├── includes/
-│   ├── db.php           # DB接続・共通関数（h(), require_login()）
-│   └── nav.php          # 共通ナビゲーション
+│   ├── db.php           # DB接続・共通関数・マイグレーション
+│   ├── nav.php          # 共通ナビゲーション
+│   └── forbidden.php    # 403 エラーページ
 ├── css/
 │   └── style.css        # スタイル（印刷用 @media print 含む）
-└── data/                # SQLite ファイル格納（.gitignore 済み）
+├── js/
+│   └── qrcode.min.js    # QRコード生成ライブラリ
+└── data/                # SQLite ファイル・設定ファイル格納（.gitignore 済み）
 ```
 
 ## セットアップ
 
 ### 必要環境
 - PHP 8.2 以上（`pdo_sqlite` 拡張有効）
-- Apache（または php -S での開発サーバー）
+- Apache
 
-### 起動手順
+### data/ ディレクトリの配置
 
-```bash
-# Apache + PHP 環境で /var/www/html に配置するか、
-# 開発用サーバーで起動する場合:
-php -S localhost:8080 -t /var/www/html
-```
+本システムは `data/` の配置場所を起動時に自動検出します。
 
-データベースファイルは初回アクセス時に `data/minibasket.db` へ自動作成されます。
+| 環境 | `data/` の配置場所 |
+|------|--------------------|
+| Docker / 開発環境 | `/var/www/html/data/` |
+| Xserver（サブドメイン等） | `public_html` と同列の `data/`（例: `sugaomax.com/data/`） |
+
+Xserver では `public_html` と同列に置くことで、FTP での上書きデプロイ時にデータが消えません。
 
 ### ログイン
 
@@ -74,19 +94,25 @@ php -S localhost:8080 -t /var/www/html
 
 設定したパスワードは bcrypt でハッシュ化され、`data/config.php` に保存されます（Git 管理外）。
 
+### ロール
+
+| ロール | 説明 |
+|--------|------|
+| admin | 全操作可能（パスワード設定含む） |
+| editor | 部員・試合・当番・入部届けの編集が可能 |
+| viewer | 閲覧のみ（編集・削除不可） |
+
 ### パスワードの再設定
 
 1. `data/config.php` を削除する
 2. `/setup.php` にアクセスして新しいパスワードを設定する
 
-```bash
-rm data/config.php
-# ブラウザで /setup.php を開く
-```
-
 ## セキュリティ
 
 - SQL はすべてプリペアドステートメントを使用（SQLインジェクション対策）
 - 出力は `h()` 関数（`htmlspecialchars`）でエスケープ（XSS 対策）
-- 全ページで `require_login()` によるセッション認証
+- フォーム送信・AJAX に CSRF トークン検証を適用
+- ロール別アクセス制御（`require_editor()` / `require_admin()`）
+- 保護者情報・緊急連絡先は追加パスワード確認後に閲覧可能（30分有効）
 - パスワードは bcrypt ハッシュ化して保存（`data/` は `.gitignore` 済み）
+- 検索エンジンインデックス拒否ヘッダーを全ページで送信

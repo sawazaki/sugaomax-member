@@ -54,6 +54,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
     $emergency_name        = trim($_POST['emergency_name'] ?? '') ?: null;
     $emergency_relationship = trim($_POST['emergency_relationship'] ?? '') ?: null;
     $emergency_phone       = trim($_POST['emergency_phone'] ?? '') ?: null;
+    $enrollment_date_raw   = trim($_POST['enrollment_date'] ?? '');
+    $d = $enrollment_date_raw !== '' ? DateTime::createFromFormat('Y-m-d', $enrollment_date_raw) : false;
+    $enrollment_date = ($d && $d->format('Y-m-d') === $enrollment_date_raw) ? $enrollment_date_raw : null;
 
     if ($last_name === '' || $grade < 1 || $grade > 6) {
         $form_error = '姓と学年は必須です。';
@@ -62,8 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
             INSERT INTO members
                 (last_name, first_name, grade, gender, school,
                  parent_name, parent_relationship, phone,
-                 emergency_name, emergency_relationship, emergency_phone)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 emergency_name, emergency_relationship, emergency_phone,
+                 enrollment_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $last_name,
@@ -77,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
             $emergency_name,
             $emergency_relationship,
             $emergency_phone,
+            $enrollment_date,
         ]);
         // セッションをクリアして再送信防止
         unset($_SESSION['enrollment_access']);
@@ -237,6 +242,11 @@ $show_form = !empty($_SESSION['enrollment_access']);
                             <label>名</label>
                             <input type="text" name="first_name" class="form-control"
                                 value="<?= h($_POST['first_name'] ?? '') ?>">
+                        </div>
+                        <div class="form-group">
+                            <label>入部日</label>
+                            <input type="date" name="enrollment_date" class="form-control"
+                                value="<?= h($_POST['enrollment_date'] ?? date('Y-m-d')) ?>">
                         </div>
                         <div class="form-group">
                             <label>学年 <span style="color:red">*</span></label>
