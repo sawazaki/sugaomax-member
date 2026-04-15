@@ -83,6 +83,10 @@ $print_rows = array_pad(array_slice($sheet_members, 0, 20), 20, null);
         #memberTableBody tr { transition: opacity .15s; }
         #memberTableBody tr.dragging { opacity: .4; }
         #memberTableBody tr.drag-over { border-top: 2px solid #2563eb; }
+        #autoSaveStatus { font-size: 12px; padding: 4px 10px; border-radius: 4px; transition: opacity .4s; }
+        #autoSaveStatus.saving  { color: #2563eb; }
+        #autoSaveStatus.saved   { color: #16a34a; }
+        #autoSaveStatus.error   { color: #dc2626; }
         .gender-tabs { display: flex; gap: 4px; margin-bottom: 10px; border-bottom: 2px solid #e2e8f0; }
         .gender-tabs button {
             padding: 5px 14px; border: 1px solid transparent; border-bottom: none;
@@ -170,7 +174,7 @@ $print_rows = array_pad(array_slice($sheet_members, 0, 20), 20, null);
                     </thead>
                     <tbody id="memberTableBody">
                     <?php foreach ($sheet_members as $m): ?>
-                        <tr data-id="<?= h($m['id']) ?>">
+                        <tr data-id="<?= h($m['id']) ?>" draggable="true">
                             <td class="drag-handle" title="ドラッグで並べ替え">☰</td>
                             <td><?= $m['number'] !== null ? h($m['number']) : '—' ?></td>
                             <td><?= h(member_name($m)) ?></td>
@@ -180,7 +184,8 @@ $print_rows = array_pad(array_slice($sheet_members, 0, 20), 20, null);
                 </table>
             </div>
 
-            <div class="mt-16 text-right no-print">
+            <div class="mt-16 text-right no-print" style="display:flex;align-items:center;justify-content:flex-end;gap:12px;">
+                <span id="autoSaveStatus"></span>
                 <button type="button" class="btn btn-primary no-print-sp" onclick="window.print()">印刷</button>
             </div>
         </div>
@@ -352,6 +357,7 @@ function onDrop(e) {
     orderedIds.splice(si, 1);
     orderedIds.splice(di, 0, srcId);
     renderPreview();
+    autoSave();
 }
 
 function onDragEnd() {
@@ -359,6 +365,32 @@ function onDragEnd() {
         r.classList.remove('dragging', 'drag-over');
     });
     dragSrc = null;
+}
+
+// ─── 自動保存 ─────────────────────────────────────
+const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+let autoSaveTimer = null;
+
+function autoSave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(async () => {
+        const status = document.getElementById('autoSaveStatus');
+        status.textContent = '保存中…';
+        status.className = 'saving';
+        const body = new URLSearchParams();
+        body.append('csrf_token', csrfToken);
+        orderedIds.forEach(id => body.append('member[]', id));
+        try {
+            const res = await fetch(location.href, { method: 'POST', body });
+            if (!res.ok) throw new Error(res.status);
+            status.textContent = '保存しました';
+            status.className = 'saved';
+            setTimeout(() => { status.textContent = ''; status.className = ''; }, 2000);
+        } catch {
+            status.textContent = '保存に失敗しました';
+            status.className = 'error';
+        }
+    }, 300);
 }
 
 // ─── フォーム送信：順番通りに hidden input を挿入 ──
