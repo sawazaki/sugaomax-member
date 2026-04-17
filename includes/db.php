@@ -255,5 +255,24 @@ function get_db()
         $pdo->exec("ALTER TABLE matches ADD COLUMN title TEXT");
     }
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL DEFAULT ''
+        )
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS webcal_sources (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            category   TEXT    NOT NULL,
+            url        TEXT    NOT NULL,
+            color_bg   TEXT    NOT NULL DEFAULT '#dbeafe',
+            color_text TEXT    NOT NULL DEFAULT '#1d4ed8',
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT    NOT NULL DEFAULT (datetime('now','localtime'))
+        )
+    ");
+
     return $pdo;
 }
