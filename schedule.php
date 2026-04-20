@@ -188,11 +188,12 @@ for ($i = 0; $i < 20; $i++) {
         }
 
         #dutyPractice {
-            width: 220px;
+            width: 240px;
         }
 
         #dutyMatch {
-            width: 290px;
+            flex: 1 1 0;
+            min-width: 0;
         }
 
         /* ── 予定テキスト列（残り幅を全て使う） ── */
@@ -476,16 +477,16 @@ for ($i = 0; $i < 20; $i++) {
 
     <!-- ライブラリ（ローカル優先。js/html2canvas.min.js / js/jspdf.umd.min.js を配置すればCDN不要） -->
     <?php if ($html2canvas_src): ?>
-    <script src="<?= h($html2canvas_src) ?>"></script>
+        <script src="<?= h($html2canvas_src) ?>"></script>
     <?php else: ?>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
             integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <?php endif; ?>
     <?php if ($jspdf_src): ?>
-    <script src="<?= h($jspdf_src) ?>"></script>
+        <script src="<?= h($jspdf_src) ?>"></script>
     <?php else: ?>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
             integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <?php endif; ?>
@@ -536,7 +537,10 @@ for ($i = 0; $i < 20; $i++) {
             overlay.style.display = '';
             if (btnRefresh) btnRefresh.disabled = true;
             try {
-                const params = new URLSearchParams({ month1: currentMonth1, month2: currentMonth2 });
+                const params = new URLSearchParams({
+                    month1: currentMonth1,
+                    month2: currentMonth2
+                });
                 if (force) params.set('force', '1');
                 const res = await fetch(`/api/ical_fetch.php?${params}`);
                 const json = await res.json();
