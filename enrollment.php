@@ -268,6 +268,7 @@ $show_form = !empty($_SESSION['enrollment_access']);
                         <div class="form-group">
                             <label>所属小学校</label>
                             <input type="text" name="school" class="form-control"
+                                placeholder="例：〇〇小学校"
                                 value="<?= h($_POST['school'] ?? '') ?>">
                         </div>
                     </div>
