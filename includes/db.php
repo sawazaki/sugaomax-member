@@ -221,6 +221,10 @@ function get_db()
     if (!in_array('height_token', $existing_members)) {
         $pdo->exec("ALTER TABLE members ADD COLUMN height_token TEXT");
     }
+    if (!in_array('height_short_code', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN height_short_code TEXT");
+    }
+    $pdo->exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_height_short_code ON members(height_short_code) WHERE height_short_code IS NOT NULL AND height_short_code != ''");
     // name → last_name / first_name への分割マイグレーション
     if (in_array('name', $existing_members)) {
         if (!in_array('last_name', $existing_members)) {

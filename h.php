@@ -1,18 +1,18 @@
 <?php
 require_once __DIR__ . '/includes/db.php';
 
-$db    = get_db();
-$token = trim($_GET['token'] ?? '');
+$db   = get_db();
+$code = trim($_GET['c'] ?? '');
 $done  = false;
 $error = '';
 
-if ($token === '') {
+if ($code === '') {
     http_response_code(404);
     exit('無効なURLです。');
 }
 
-$member = $db->prepare("SELECT id, last_name, first_name, grade, height FROM members WHERE active=1 AND height_token=? LIMIT 1");
-$member->execute([$token]);
+$member = $db->prepare("SELECT id, last_name, first_name, grade, height FROM members WHERE active=1 AND height_short_code=? LIMIT 1");
+$member->execute([$code]);
 $member = $member->fetch();
 
 if (!$member) {
@@ -44,11 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_expired) {
     <link rel="stylesheet" href="/css/style.css">
     <style>
         body { background: #f1f5f9; }
-        .update-card {
-            max-width: 420px;
-            margin: 60px auto;
-            padding: 32px 28px;
-        }
+        .update-card { max-width: 420px; margin: 60px auto; padding: 32px 28px; }
         .team-logo { text-align: center; margin-bottom: 24px; }
         .team-logo img { height: 48px; }
         .member-display {
@@ -61,18 +57,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$is_expired) {
         }
         .member-display .grade { font-size: 13px; color: #64748b; }
         .member-display .name  { font-size: 22px; font-weight: bold; margin-top: 4px; }
-        .height-input {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .height-input { display: flex; align-items: center; gap: 8px; }
         .height-input input {
-            width: 120px;
-            font-size: 28px;
-            text-align: center;
-            padding: 10px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
+            width: 120px; font-size: 28px; text-align: center;
+            padding: 10px; border: 2px solid #e2e8f0; border-radius: 8px;
         }
         .height-input .unit { font-size: 20px; color: #64748b; }
         .done-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
