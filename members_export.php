@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'expor
         $row = [];
         foreach ($selected as $key) {
             if ($key === 'grade') {
-                $row[] = $m['grade'] . '年';
+                $row[] = $m['grade'];
             } else {
                 $row[] = csv_safe($m[$key] ?? '');
             }
