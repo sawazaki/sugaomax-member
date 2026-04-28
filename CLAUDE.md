@@ -56,3 +56,10 @@ emergency_name, emergency_relationship, emergency_phone, active
 ## 外部ライブラリ（schedule.php）
 - `js/html2canvas.min.js` / `js/jspdf.umd.min.js` をローカルに配置すれば CDN 不使用で動作
 - ローカルファイル未配置時は SRI + crossorigin 付き CDN（バージョン固定）にフォールバック
+
+## ローカル開発環境
+- Apache がポート **53570** で稼働（`/etc/apache2/ports.conf` に設定済み）
+- ベースURL: `http://localhost:53570/`
+- 起動コマンド: `apache2ctl start`
+- 起動確認: `curl -s -o /dev/null -w "%{http_code}" http://localhost:53570/`
+- 開発作業を始める前に必ず Apache を起動すること

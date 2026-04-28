@@ -19,9 +19,9 @@ $matches = $db->query("
     SELECT m.*, COUNT(mm.id) AS member_count
     FROM matches m
     LEFT JOIN match_members mm ON mm.match_id = m.id
-    WHERE m.match_date >= date('now','localtime')
+    WHERE m.match_date < date('now','localtime')
     GROUP BY m.id
-    ORDER BY m.match_date ASC, m.id ASC
+    ORDER BY m.match_date DESC, m.id DESC
 ")->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -29,22 +29,22 @@ $matches = $db->query("
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>試合管理 - 菅生マックス チーム管理</title>
+    <title>過去の試合（アーカイブ） - 菅生マックス チーム管理</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 <?php require __DIR__ . '/includes/nav.php'; ?>
 <div class="container">
     <div class="flex items-center justify-between mb-16">
-        <h1 class="page-title" style="margin-bottom:0">試合管理</h1>
-        <a href="/match_new.php" class="btn btn-primary">＋ 試合を追加</a>
+        <h1 class="page-title" style="margin-bottom:0">過去の試合（アーカイブ）</h1>
+        <a href="/matches.php" class="btn btn-outline">← 試合一覧に戻る</a>
     </div>
 
     <?php if ($msg): ?><div class="alert alert-success"><?= h($msg) ?></div><?php endif; ?>
 
     <div class="card">
         <?php if (empty($matches)): ?>
-            <p class="text-muted text-center" style="padding:24px 0;">試合がまだ登録されていません。</p>
+            <p class="text-muted text-center" style="padding:24px 0;">アーカイブされた試合はありません。</p>
         <?php else: ?>
         <div class="table-wrap">
         <table>
@@ -90,9 +90,6 @@ $matches = $db->query("
         </table>
         </div>
         <?php endif; ?>
-    </div>
-    <div class="text-right mt-16">
-        <a href="/matches_archive.php" class="btn btn-outline btn-sm">過去の試合（アーカイブ）を見る →</a>
     </div>
 </div>
 </body>
