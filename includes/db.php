@@ -218,6 +218,9 @@ function get_db()
     if (!in_array('enrollment_date', $existing_members)) {
         $pdo->exec("ALTER TABLE members ADD COLUMN enrollment_date TEXT");
     }
+    if (!in_array('height_token', $existing_members)) {
+        $pdo->exec("ALTER TABLE members ADD COLUMN height_token TEXT");
+    }
     // name → last_name / first_name への分割マイグレーション
     if (in_array('name', $existing_members)) {
         if (!in_array('last_name', $existing_members)) {

@@ -19,6 +19,9 @@ $current = basename($_SERVER['PHP_SELF']);
         <li><a href="/schedule.php" class="<?= $current === 'schedule.php' ? 'active' : '' ?>">予定</a></li>
         <li class="navbar-menu-spacer"></li>
         <li><a href="/nyubu.php" class="<?= $current === 'nyubu.php' ? 'active' : '' ?>">入部</a></li>
+        <?php if (is_editor()): ?>
+        <li><a href="/height_tokens.php" class="<?= $current === 'height_tokens.php' ? 'active' : '' ?>">身長更新</a></li>
+        <?php endif; ?>
         <?php if (is_admin()): ?>
             <li><a href="/settings.php" class="<?= $current === 'settings.php' ? 'active' : '' ?>">設定</a></li>
         <?php endif; ?>
