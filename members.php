@@ -26,7 +26,7 @@ $known_grades = [1, 2, 3, 4, 5, 6];
 $grade_tab = in_array((int)($_GET['grade'] ?? 0), $known_grades) ? (int)$_GET['grade'] : 'ALL';
 
 // ソート
-$sort_cols = ['grade' => 'grade', 'number' => 'number', 'last_name' => 'last_name', 'gender' => 'gender', 'school' => 'school', 'reversible_bibs' => 'reversible_bibs', 'blue_bibs' => 'blue_bibs'];
+$sort_cols = ['grade' => 'grade', 'number' => 'number', 'last_name' => 'last_name', 'gender' => 'gender', 'height' => 'height', 'school' => 'school', 'reversible_bibs' => 'reversible_bibs', 'blue_bibs' => 'blue_bibs'];
 $sort = isset($sort_cols[$_GET['sort'] ?? '']) ? $_GET['sort'] : 'grade';
 $dir  = ($_GET['dir'] ?? '') === 'asc' ? 'asc' : (($_GET['dir'] ?? '') === 'desc' ? 'desc' : ($sort === 'grade' ? 'desc' : 'asc'));
 $col  = $sort_cols[$sort];

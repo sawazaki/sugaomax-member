@@ -187,18 +187,25 @@ for ($i = 0; $i < 20; $i++) {
             flex-direction: column;
         }
 
-        #dutyPractice {
-            width: 240px;
+        .sheet-duty-stack {
+            flex: 6.5 6.5 0;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-
-        #dutyMatch {
-            flex: 1 1 0;
+        .sheet-duty-row {
+            flex-direction: row !important;
+            gap: 8px;
+        }
+        .sheet-duty-row > div {
+            flex: 1;
             min-width: 0;
         }
 
         /* ── 予定テキスト列（残り幅を全て使う） ── */
         .sheet-text-col {
-            flex: 1 1 0;
+            flex: 3.5 3.5 0;
             min-width: 0;
             display: flex;
             flex-direction: column;
@@ -244,7 +251,7 @@ for ($i = 0; $i < 20; $i++) {
 
         .cal-dow-row {
             display: grid;
-            grid-template-columns: repeat(5, 1fr) 1.5fr 1.5fr;
+            grid-template-columns: repeat(5, 0.6fr) 1.5fr 1.5fr;
             flex-shrink: 0;
         }
 
@@ -273,7 +280,7 @@ for ($i = 0; $i < 20; $i++) {
 
         .cal-week-row {
             display: grid;
-            grid-template-columns: repeat(5, 1fr) 1.5fr 1.5fr;
+            grid-template-columns: repeat(5, 0.6fr) 1.5fr 1.5fr;
             flex: 1;
             border-top: 1px solid #e2e8f0;
         }
@@ -464,11 +471,13 @@ for ($i = 0; $i < 20; $i++) {
                         <div class="sheet-cal-col" id="calCol1"></div>
                         <div class="sheet-cal-col" id="calCol2"></div>
                     </div>
-                    <!-- 下段: 注意事項・練習当番・試合当番 を1行に -->
+                    <!-- 下段: 注意事項・当番（練習2列＋試合を縦積み） -->
                     <div class="sheet-row-bottom">
                         <div class="sheet-text-col" id="scheduleText"></div>
-                        <div class="sheet-duty-col" id="dutyPractice"></div>
-                        <div class="sheet-duty-col" id="dutyMatch"></div>
+                        <div class="sheet-duty-stack">
+                            <div id="dutyPractice"></div>
+                            <div id="dutyMatch"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -581,8 +590,7 @@ for ($i = 0; $i < 20; $i++) {
 
             // テキスト・当番表描画
             renderScheduleText(document.getElementById('scheduleText'));
-            renderPracticeDuty(document.getElementById('dutyPractice'));
-            renderMatchDuty(document.getElementById('dutyMatch'));
+            renderDutySection();
 
             // 凡例描画（ヘッダーのタイトル右横に）
             renderLegend(document.getElementById('legendRow'), events);
@@ -654,16 +662,43 @@ for ($i = 0; $i < 20; $i++) {
             container.innerHTML = html;
         }
 
-        // ─── 練習当番描画 ─────────────────────────────────────────
-        function renderPracticeDuty(container) {
-            let html = `<div class="duty-title-bar">練習当番</div>`;
-            html += `<table class="duty-compact-table">`;
-            html += `<tbody>`;
-            for (const [key, members] of Object.entries(dutyData.practice)) {
-                const names = members.length ? members.join('　') : '—';
-                html += `<tr><td class="duty-key">${e(key)}</td><td>${e(names)}</td></tr>`;
+        // ─── 当番エリア描画（グループ数でレイアウト切替） ────────────
+        function renderDutySection() {
+            const matchCount = Object.values(dutyData.match).filter(m => m.length > 0).length;
+            const wide = matchCount >= 3;
+            const stack = document.querySelector('.sheet-duty-stack');
+
+            renderPracticeDuty(document.getElementById('dutyPractice'), wide);
+            renderMatchDuty(document.getElementById('dutyMatch'));
+
+            if (wide) {
+                stack.classList.add('sheet-duty-row');
+            } else {
+                stack.classList.remove('sheet-duty-row');
             }
-            html += `</tbody></table>`;
+        }
+
+        // ─── 練習当番描画 ────────────────────────────────────────
+        // wide=true（試合3グループ以上）: 1カラム、false: A-E/F-J の2カラム
+        function renderPracticeDuty(container, wide = false) {
+            const entries = Object.entries(dutyData.practice);
+            const makeTable = (rows) => {
+                let t = `<table class="duty-compact-table" style="flex:1;min-width:0;"><tbody>`;
+                for (const [key, members] of rows) {
+                    const names = members.length ? members.join('　') : '—';
+                    t += `<tr><td class="duty-key">${e(key)}</td><td>${e(names)}</td></tr>`;
+                }
+                return t + `</tbody></table>`;
+            };
+            let html = `<div class="duty-title-bar">練習当番</div>`;
+            if (wide) {
+                html += makeTable(entries);
+            } else {
+                html += `<div style="display:flex;gap:6px;">`;
+                html += makeTable(entries.slice(0, 5));  // A-E
+                html += makeTable(entries.slice(5));     // F-J
+                html += `</div>`;
+            }
             container.innerHTML = html;
         }
 
@@ -673,8 +708,8 @@ for ($i = 0; $i < 20; $i++) {
             html += `<table class="duty-compact-table">`;
             html += `<tbody>`;
             for (const [key, members] of Object.entries(dutyData.match)) {
-                const names = members.length ? members.join('　') : '—';
-                html += `<tr><td class="duty-key">${e(key)}</td><td>${e(names)}</td></tr>`;
+                if (!members.length) continue;
+                html += `<tr><td class="duty-key">${e(key)}</td><td>${e(members.join('　'))}</td></tr>`;
             }
             html += `</tbody></table>`;
             html += `<p style="font-size:8.5px;color:#475569;margin-top:1px;line-height:1.5;">※4年生は対象となる試合の時のみ当番を担当します</p>`;

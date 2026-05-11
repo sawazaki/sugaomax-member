@@ -83,6 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'expor
     $rn++;
     // データ行（当番列: スタイル2: グレー背景・紺太字）
     foreach ($groups as $key => $members) {
+        if (empty($members)) continue;
         $sheet_rows .= '<row r="' . $rn . '">'
             . '<c r="A' . $rn . '" t="inlineStr" s="2"><is><t>' . $xc($key) . '</t></is></c>'
             . '<c r="B' . $rn . '" t="inlineStr"><is><t>' . $xc(implode(' ', $members)) . '</t></is></c>'
