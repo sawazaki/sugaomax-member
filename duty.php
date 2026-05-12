@@ -504,6 +504,18 @@ $match_unassigned = $db->query("SELECT * FROM members WHERE active=1 AND (match_
                 <?php render_duty_table($match_groups, 'match', $match_unassigned, $dup_names); ?>
             </div>
         </div>
+
+        <!-- BAND投稿用テキスト -->
+        <div class="duty-section">
+            <div class="card">
+                <div class="flex items-center justify-between" style="margin-bottom:12px;">
+                    <div class="card-title" style="margin-bottom:0">BAND投稿用テキスト</div>
+                    <button type="button" id="copy-band-btn" class="btn btn-outline btn-sm">コピー</button>
+                </div>
+                <textarea id="band-text" readonly style="width:100%; min-height:220px; font-family:'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif; font-size:14px; line-height:2; border:1px solid #e2e8f0; border-radius:6px; padding:12px; resize:vertical; background:#f8fafc; color:#334155; box-sizing:border-box;"></textarea>
+                <p style="font-size:12px; color:#94a3b8; margin-top:8px;">ドラッグで並び替えた結果が自動で反映されます。コピーボタンでクリップボードにコピーできます。</p>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -626,6 +638,7 @@ $match_unassigned = $db->query("SELECT * FROM members WHERE active=1 AND (match_
             updateCount(dragEl.dataset.type, destKey);
             saveDuty(dragEl.dataset.memberId, dragEl.dataset.type, destKey);
             saveOrder(dragEl.dataset.type, zone);
+            updateBandText();
         }
 
         // ── マウス ドラッグイベント ───────────────────────────────
@@ -686,6 +699,7 @@ $match_unassigned = $db->query("SELECT * FROM members WHERE active=1 AND (match_
                     // 同一ゾーン: dragover で移動済み → 保存
                     targetZone.classList.remove('drag-over');
                     saveOrder(dragEl.dataset.type, targetZone);
+                    updateBandText();
                     return;
                 }
                 // 別ゾーンのメンバーの上にドロップ
@@ -750,6 +764,67 @@ $match_unassigned = $db->query("SELECT * FROM members WHERE active=1 AND (match_
             passive: false
         });
 
+        // ── BAND投稿用テキスト生成 ─────────────────────────────
+        const GRADE_CIRCLE = {'1':'①','2':'②','3':'③','4':'④','5':'⑤','6':'⑥'};
+
+        function getMemberLabel(el) {
+            const grade = el.querySelector('.grade-badge').textContent.replace('年', '').trim();
+            const name = Array.from(el.childNodes)
+                .filter(n => n.nodeType === Node.TEXT_NODE)
+                .map(n => n.textContent.trim())
+                .filter(t => t)
+                .join('');
+            return (GRADE_CIRCLE[grade] || grade + '年') + name;
+        }
+
+        function updateBandText() {
+            const practiceKeys = ['A','B','C','D','E','F','G','H','I','J'];
+            const matchKeys    = ['1','2','3','4'];
+            const lines = [];
+
+            lines.push('【練習当番】');
+            for (const key of practiceKeys) {
+                const zone = document.querySelector(`.duty-members[data-type="practice"][data-key="${key}"]`);
+                if (!zone) continue;
+                const members = zone.querySelectorAll('.duty-member');
+                if (members.length === 0) continue;
+                const names = Array.from(members).map(getMemberLabel).join('　');
+                lines.push(key + '：' + names);
+            }
+
+            lines.push('');
+            lines.push('【試合当番】');
+            for (const key of matchKeys) {
+                const zone = document.querySelector(`.duty-members[data-type="match"][data-key="${key}"]`);
+                if (!zone) continue;
+                const members = zone.querySelectorAll('.duty-member');
+                if (members.length === 0) continue;
+                const names = Array.from(members).map(getMemberLabel).join('　');
+                lines.push(key + '番：' + names);
+            }
+
+            document.getElementById('band-text').value = lines.join('\n');
+        }
+
+        // コピーボタン
+        document.getElementById('copy-band-btn').addEventListener('click', () => {
+            const ta = document.getElementById('band-text');
+            ta.select();
+            ta.setSelectionRange(0, ta.value.length);
+            navigator.clipboard.writeText(ta.value).then(() => {
+                const btn = document.getElementById('copy-band-btn');
+                const orig = btn.textContent;
+                btn.textContent = 'コピーしました！';
+                btn.disabled = true;
+                setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+            }).catch(() => {
+                document.execCommand('copy');
+            });
+        });
+
+        // 初期生成
+        updateBandText();
+
         document.addEventListener('touchend', e => {
             if (!dragEl) return;
 
@@ -771,6 +846,7 @@ $match_unassigned = $db->query("SELECT * FROM members WHERE active=1 AND (match_
                         // 同一ゾーン: 指定メンバーの前に挿入して保存
                         targetZone.insertBefore(dragEl, memberEl);
                         saveOrder(dragEl.dataset.type, targetZone);
+                        updateBandText();
                     } else {
                         // 別ゾーンのメンバー上にドロップ
                         dropToZone(targetZone, memberEl);
